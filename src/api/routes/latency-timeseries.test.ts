@@ -11,6 +11,10 @@ mock.module('../../collector/storage.ts', () => ({
   downloadProfiles: mockDownloadProfiles
 }))
 
+mock.module('../../db.ts', () => ({
+  getClient: mock(() => Promise.resolve({}))
+}))
+
 const { default: app } = await import('../index.ts')
 
 function request(body: Record<string, unknown>) {
