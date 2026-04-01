@@ -48,7 +48,7 @@ export function TimeRangeSelector() {
       {timeRangeOptions.map((option) => (
         <Button
           key={option.seconds}
-          variant={current === option.seconds ? 'secondary' : 'ghost'}
+          variant={current === option.seconds ? 'default' : 'ghost'}
           size="sm"
           onClick={() => selectRange(option.seconds)}
         >
