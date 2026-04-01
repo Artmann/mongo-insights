@@ -1,4 +1,5 @@
 import dayjs from 'dayjs'
+import { BarChart3 } from 'lucide-react'
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
 
 import {
@@ -9,6 +10,14 @@ import {
   ChartTooltipContent,
   type ChartConfig
 } from '@/components/ui/chart'
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle
+} from '@/components/ui/empty'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useLatencyTimeseries } from '@/hooks/use-latency-timeseries'
 
 const chartConfig = {
@@ -44,24 +53,46 @@ export function LatencyChart({ database, timeRange }: LatencyChartProps) {
 
   if (isLoading) {
     return (
-      <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-        Loading chart...
+      <div className="flex h-[200px] flex-col gap-3 pt-3 sm:h-[300px]">
+        <div className="flex flex-1 items-end gap-2 px-12">
+          <Skeleton className="h-[60%] flex-1" />
+          <Skeleton className="h-[80%] flex-1" />
+          <Skeleton className="h-[45%] flex-1" />
+          <Skeleton className="h-[70%] flex-1" />
+          <Skeleton className="h-[55%] flex-1" />
+          <Skeleton className="h-[90%] flex-1" />
+          <Skeleton className="h-[65%] flex-1" />
+          <Skeleton className="h-[50%] flex-1" />
+        </div>
+
+        <Skeleton className="mx-12 h-4" />
       </div>
     )
   }
 
   if (buckets.length === 0) {
     return (
-      <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-        No latency data available.
-      </div>
+      <Empty className="h-[200px] sm:h-[300px]">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <BarChart3 />
+          </EmptyMedia>
+
+          <EmptyTitle>No latency data available</EmptyTitle>
+
+          <EmptyDescription>
+            Try selecting a wider time range, or make sure queries are being
+            executed against this database.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     )
   }
 
   return (
     <ChartContainer
       config={chartConfig}
-      className="aspect-auto h-[300px] w-full"
+      className="aspect-auto h-[200px] w-full sm:h-[300px]"
     >
       <LineChart
         data={buckets}
