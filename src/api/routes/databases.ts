@@ -1,33 +1,43 @@
 import { Hono } from 'hono'
-import { MongoClient } from 'mongodb'
-import invariant from 'tiny-invariant'
+
+import { getClient } from '../../db.ts'
 
 const databases = new Hono()
 
 const systemDatabases = ['admin', 'config', 'local']
 
 databases.get('/', async (context) => {
-  const url = process.env.DATABASE_URL
+  const client = await getClient()
+  const admin = client.db('admin')
+  const result = await admin.command({ listDatabases: 1, nameOnly: true })
 
-  invariant(url, 'DATABASE_URL is not set')
+  const names = (result.databases as { name: string }[])
+    .map((database) => database.name)
+    .filter((name) => !systemDatabases.includes(name))
 
-  const client = new MongoClient(url)
+  const entries = await Promise.all(
+    names.map(async (name) => {
+      try {
+        const db = client.db(name)
+        const status = await db.command({ profile: -1 })
+        const level = status.was as number
 
-  try {
-    await client.connect()
+        return { name, profilingEnabled: level === 1 || level === 2 }
+      } catch {
+        return { name, profilingEnabled: false }
+      }
+    })
+  )
 
-    const admin = client.db('admin')
-    const result = await admin.command({ listDatabases: 1, nameOnly: true })
+  entries.sort((a, b) => {
+    if (a.profilingEnabled !== b.profilingEnabled) {
+      return a.profilingEnabled ? -1 : 1
+    }
 
-    const names = (result.databases as { name: string }[])
-      .map((database) => database.name)
-      .filter((name) => !systemDatabases.includes(name))
-      .sort()
+    return a.name.localeCompare(b.name)
+  })
 
-    return context.json({ databases: names })
-  } finally {
-    await client.close()
-  }
+  return context.json({ databases: entries })
 })
 
 export default databases

@@ -17,6 +17,9 @@ export default defineConfig({
   },
   server: {
     port: 4281,
-    strictPort: true
+    strictPort: true,
+    hmr: {
+      port: 4281
+    }
   }
 })

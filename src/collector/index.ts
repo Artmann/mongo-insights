@@ -1,8 +1,8 @@
 import dayjs from 'dayjs'
-import { MongoClient } from 'mongodb'
-import invariant from 'tiny-invariant'
+import type { MongoClient } from 'mongodb'
 import { log } from 'tiny-typescript-logger'
 
+import { getClient } from '../db.ts'
 import { addEntries, getEtag, initializeBuffer, setEtag } from './buffer.ts'
 import { downloadProfiles, uploadProfiles } from './storage.ts'
 
@@ -13,20 +13,9 @@ const systemDatabases = ['admin', 'local', 'config']
 const lastSeenTs = new Map<string, Date>()
 
 export async function startCollector() {
-  const url = process.env.DATABASE_URL
+  const client = await getClient()
 
-  invariant(url, 'DATABASE_URL is not set')
-
-  const client = new MongoClient(url)
-
-  try {
-    await client.connect()
-    log.info('Connected to MongoDB')
-  } catch (error) {
-    log.error('Failed to connect:', error)
-
-    return
-  }
+  log.info('Connected to MongoDB')
 
   const allDatabases = await listDatabases(client)
 

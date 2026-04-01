@@ -17,6 +17,13 @@ if (isProd) {
   // Serve built frontend assets
   const { serveStatic } = await import('hono/bun')
   app.use('/*', serveStatic({ root: './dist/client' }))
+
+  // SPA fallback for client-side routing
+  app.get('/*', async (context) => {
+    const html = await Bun.file('./dist/client/index.html').text()
+
+    return context.html(html)
+  })
 } else {
   // Start Vite dev server as a subprocess
   const viteProcess = Bun.spawn(['bunx', 'vite', '--port', String(vitePort)], {
@@ -28,7 +35,8 @@ if (isProd) {
   app.all('/*', async (c) => {
     const url = new URL(c.req.url)
     url.host = `localhost:${vitePort}`
-    const res = await fetch(url.toString(), {
+
+    const response = await fetch(url.toString(), {
       method: c.req.method,
       headers: c.req.raw.headers,
       body:
@@ -36,9 +44,14 @@ if (isProd) {
           ? undefined
           : c.req.raw.body
     })
-    return new Response(res.body, {
-      status: res.status,
-      headers: res.headers
+
+    const headers = new Headers(response.headers)
+
+    headers.delete('transfer-encoding')
+
+    return new Response(response.body, {
+      status: response.status,
+      headers
     })
   })
 }
