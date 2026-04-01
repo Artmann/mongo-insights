@@ -128,3 +128,13 @@
     @apply font-sans;
   }
 }
+
+@keyframes ball-bounce {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(calc(100cqw - 1rem));
+  }
+}

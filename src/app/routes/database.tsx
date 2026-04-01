@@ -1,6 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router'
 
+import { Circle, Table2 } from 'lucide-react'
+
+import { BallChart } from '@/components/ball-chart'
 import {
   Empty,
   EmptyContent,
@@ -9,6 +12,7 @@ import {
   EmptyMedia,
   EmptyTitle
 } from '@/components/ui/empty'
+import { Button } from '@/components/ui/button'
 import { LatencyChart } from '@/components/latency-chart'
 import { QueriesTable } from '@/components/queries-table'
 import {
@@ -56,6 +60,7 @@ function BarChartIcon(props: React.ComponentProps<'svg'>) {
 export function DatabasePage() {
   const { databaseName } = useParams()
   const { data } = useDatabases()
+  const [viewMode, setViewMode] = useState<'ball' | 'table'>('table')
 
   const database = data?.databases.find((d) => d.name === databaseName)
   const timeRange = useTimeRange()
@@ -115,15 +120,44 @@ export function DatabasePage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="text-lg font-medium">
-          Queries in the last {timeRangeLabel(timeRange)}
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">
+            Queries in the last {timeRangeLabel(timeRange)}
+          </h2>
+
+          <div className="flex items-center gap-0.5 rounded-md border p-0.5">
+            <Button
+              variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+              size="icon"
+              className="size-7"
+              onClick={() => setViewMode('table')}
+            >
+              <Table2 className="size-3.5" />
+            </Button>
+
+            <Button
+              variant={viewMode === 'ball' ? 'secondary' : 'ghost'}
+              size="icon"
+              className="size-7"
+              onClick={() => setViewMode('ball')}
+            >
+              <Circle className="size-3.5" />
+            </Button>
+          </div>
+        </div>
 
         <div className="mt-4">
-          <QueriesTable
-            database={databaseName ?? ''}
-            timeRange={timeRange}
-          />
+          {viewMode === 'table' ? (
+            <QueriesTable
+              database={databaseName ?? ''}
+              timeRange={timeRange}
+            />
+          ) : (
+            <BallChart
+              database={databaseName ?? ''}
+              timeRange={timeRange}
+            />
+          )}
         </div>
       </section>
     </div>
