@@ -32,17 +32,17 @@ if (isProd) {
   process.on('exit', () => viteProcess.kill())
 
   // Proxy all non-API requests to Vite
-  app.all('/*', async (c) => {
-    const url = new URL(c.req.url)
+  app.all('/*', async (context) => {
+    const url = new URL(context.req.url)
     url.host = `localhost:${vitePort}`
 
     const response = await fetch(url.toString(), {
-      method: c.req.method,
-      headers: c.req.raw.headers,
+      method: context.req.method,
+      headers: context.req.raw.headers,
       body:
-        c.req.method === 'GET' || c.req.method === 'HEAD'
+        context.req.method === 'GET' || context.req.method === 'HEAD'
           ? undefined
-          : c.req.raw.body
+          : context.req.raw.body
     })
 
     const headers = new Headers(response.headers)

@@ -35,7 +35,7 @@ for (const row of rows) {
   totalMillis += row.millis
 }
 
-const millis = rows.map((r) => r.millis).sort((a, b) => a - b)
+const millis = rows.map((row) => row.millis).sort((a, b) => a - b)
 const p50 = millis[Math.ceil(millis.length * 0.5) - 1] ?? 0
 const p99 = millis[Math.ceil(millis.length * 0.99) - 1] ?? 0
 
