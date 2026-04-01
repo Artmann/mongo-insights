@@ -1,0 +1,33 @@
+{
+  "name": "mongo-insights",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "bunx vite build",
+    "dev": "bun --hot src/index.ts",
+    "format": "prettier --write .",
+    "start": "NODE_ENV=production bun src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "prettier": "^3.8.1",
+    "vite": "^8.0.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1021.0",
+    "apache-arrow": "^21.1.0",
+    "hono": "^4.12.9",
+    "mongodb": "^7.1.1",
+    "parquet-wasm": "^0.7.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  }
+}
