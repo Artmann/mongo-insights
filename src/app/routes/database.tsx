@@ -62,7 +62,9 @@ export function DatabasePage() {
   const { data } = useDatabases()
   const [viewMode, setViewMode] = useState<'ball' | 'table'>('table')
 
-  const database = data?.databases.find((d) => d.name === databaseName)
+  const database = data?.databases.find(
+    (candidate) => candidate.name === databaseName
+  )
   const timeRange = useTimeRange()
 
   useEffect(() => {

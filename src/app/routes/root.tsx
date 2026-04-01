@@ -22,7 +22,7 @@ export function RootRedirect() {
     }
 
     const last = getLastDatabase()
-    const match = databases.find((d) => d.name === last)
+    const match = databases.find((database) => database.name === last)
     const target = match?.name ?? databases[0]?.name
 
     void navigate(`/databases/${target}`, { replace: true })
