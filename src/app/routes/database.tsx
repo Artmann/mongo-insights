@@ -9,7 +9,13 @@ import {
   EmptyMedia,
   EmptyTitle
 } from '@/components/ui/empty'
+import { LatencyChart } from '@/components/latency-chart'
 import { QueriesTable } from '@/components/queries-table'
+import {
+  TimeRangeSelector,
+  timeRangeLabel,
+  useTimeRange
+} from '@/components/time-range-selector'
 import { useDatabases } from '@/hooks/use-databases'
 import { setLastDatabase } from '@/lib/last-database'
 
@@ -52,6 +58,7 @@ export function DatabasePage() {
   const { data } = useDatabases()
 
   const database = data?.databases.find((d) => d.name === databaseName)
+  const timeRange = useTimeRange()
 
   useEffect(() => {
     if (databaseName) {
@@ -90,13 +97,33 @@ export function DatabasePage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold">Insights</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Insights</h1>
+
+        <TimeRangeSelector />
+      </div>
 
       <section className="mt-8">
-        <h2 className="text-lg font-medium">Queries in the last 24 hours</h2>
+        <h2 className="text-lg font-medium">Query latency</h2>
 
         <div className="mt-4">
-          <QueriesTable database={databaseName ?? ''} />
+          <LatencyChart
+            database={databaseName ?? ''}
+            timeRange={timeRange}
+          />
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-lg font-medium">
+          Queries in the last {timeRangeLabel(timeRange)}
+        </h2>
+
+        <div className="mt-4">
+          <QueriesTable
+            database={databaseName ?? ''}
+            timeRange={timeRange}
+          />
         </div>
       </section>
     </div>

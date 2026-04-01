@@ -5,6 +5,7 @@ import { prettyJSON } from 'hono/pretty-json'
 
 import databases from './routes/databases.ts'
 import health from './routes/health.ts'
+import latencyTimeseries from './routes/latency-timeseries.ts'
 import queries from './routes/queries.ts'
 
 const api = new Hono()
@@ -15,6 +16,7 @@ api.use('*', prettyJSON())
 
 api.route('/databases', databases)
 api.route('/health', health)
+api.route('/latency-timeseries', latencyTimeseries)
 api.route('/queries', queries)
 
 export default api

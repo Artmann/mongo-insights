@@ -24,20 +24,22 @@ interface UseQueriesOptions {
   database: string
   page?: number
   pageSize?: number
+  timeRange?: number
 }
 
 export function useQueries({
   database,
   page = 1,
-  pageSize = 25
+  pageSize = 25,
+  timeRange = 86400
 }: UseQueriesOptions) {
   return useQuery({
-    queryKey: ['queries', database, page, pageSize],
+    queryKey: ['queries', database, page, pageSize, timeRange],
     queryFn: async (): Promise<QueriesResponse> => {
       const response = await fetch('/api/queries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ database, page, pageSize })
+        body: JSON.stringify({ database, page, pageSize, timeRange })
       })
 
       if (!response.ok) {

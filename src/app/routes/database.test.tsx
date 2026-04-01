@@ -49,25 +49,40 @@ mock.module('@/hooks/use-databases', () => ({
   useDatabases: mockUseDatabases
 }))
 
+const mockUseLatencyTimeseries = mock(() => ({
+  data: null as {
+    buckets: { time: string; p50: number; p99: number }[]
+  } | null,
+  isLoading: false
+}))
+
 mock.module('@/hooks/use-queries', () => ({
   useQueries: mockUseQueries
+}))
+
+mock.module('@/hooks/use-latency-timeseries', () => ({
+  useLatencyTimeseries: mockUseLatencyTimeseries
 }))
 
 mock.module('@/lib/last-database', () => ({
   setLastDatabase: mock()
 }))
 
-function renderPage(databaseName: string) {
+function renderPage(databaseName: string, searchParams?: string) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false }
     }
   })
 
+  const url = searchParams
+    ? `/databases/${databaseName}?${searchParams}`
+    : `/databases/${databaseName}`
+
   return render(
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <MemoryRouter initialEntries={[`/databases/${databaseName}`]}>
+        <MemoryRouter initialEntries={[url]}>
           <Routes>
             <Route
               path="/databases/:databaseName/*"
@@ -129,7 +144,7 @@ describe('DatabasePage', () => {
     renderPage('mydb')
 
     expect(screen.getByText('Insights')).toBeTruthy()
-    expect(screen.getByText('Queries in the last 24 hours')).toBeTruthy()
+    expect(screen.getByText('Queries in the last 24h')).toBeTruthy()
   })
 
   test('shows loading state while queries are fetching', () => {
@@ -147,7 +162,7 @@ describe('DatabasePage', () => {
     renderPage('mydb')
 
     expect(
-      screen.getByText('No queries recorded in the last 24 hours.')
+      screen.getByText('No queries recorded in this time range.')
     ).toBeTruthy()
   })
 
@@ -276,5 +291,55 @@ describe('DatabasePage', () => {
     renderPage('mydb')
 
     expect(screen.getByText('< 1')).toBeTruthy()
+  })
+
+  test('shows time range selector buttons', () => {
+    renderPage('mydb')
+
+    expect(screen.getByText('1h')).toBeTruthy()
+    expect(screen.getByText('8h')).toBeTruthy()
+    expect(screen.getByText('24h')).toBeTruthy()
+    expect(screen.getByText('3d')).toBeTruthy()
+    expect(screen.getByText('7d')).toBeTruthy()
+  })
+
+  test('shows query latency section', () => {
+    renderPage('mydb')
+
+    expect(screen.getByText('Query latency')).toBeTruthy()
+  })
+
+  test('updates heading based on time range param', () => {
+    renderPage('mydb', 'timeRange=3600')
+
+    expect(screen.getByText('Queries in the last 1h')).toBeTruthy()
+  })
+
+  test('shows 7d label for 7-day time range', () => {
+    renderPage('mydb', 'timeRange=604800')
+
+    expect(screen.getByText('Queries in the last 7d')).toBeTruthy()
+  })
+
+  test('shows chart loading state', () => {
+    mockUseLatencyTimeseries.mockReturnValue({
+      data: null,
+      isLoading: true
+    })
+
+    renderPage('mydb')
+
+    expect(screen.getByText('Loading chart...')).toBeTruthy()
+  })
+
+  test('shows empty chart state when no latency data', () => {
+    mockUseLatencyTimeseries.mockReturnValue({
+      data: { buckets: [] },
+      isLoading: false
+    })
+
+    renderPage('mydb')
+
+    expect(screen.getByText('No latency data available.')).toBeTruthy()
   })
 })

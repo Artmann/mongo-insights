@@ -35,19 +35,33 @@ function formatTime(seconds: number): string {
 
 interface QueriesTableProps {
   database: string
+  timeRange: number
 }
 
-export function QueriesTable({ database }: QueriesTableProps) {
+export function QueriesTable({ database, timeRange }: QueriesTableProps) {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const page = Math.max(1, Number(searchParams.get('page')) || 1)
   const pageSize = 25
 
   function setPage(newPage: number) {
-    setSearchParams(newPage === 1 ? {} : { page: String(newPage) })
+    const next = new URLSearchParams(searchParams)
+
+    if (newPage === 1) {
+      next.delete('page')
+    } else {
+      next.set('page', String(newPage))
+    }
+
+    setSearchParams(next)
   }
 
-  const { data, isLoading } = useQueries({ database, page, pageSize })
+  const { data, isLoading } = useQueries({
+    database,
+    page,
+    pageSize,
+    timeRange
+  })
 
   const queries = data?.queries ?? []
   const total = data?.total ?? 0
@@ -64,7 +78,7 @@ export function QueriesTable({ database }: QueriesTableProps) {
   if (queries.length === 0) {
     return (
       <div className="py-12 text-center text-muted-foreground">
-        No queries recorded in the last 24 hours.
+        No queries recorded in this time range.
       </div>
     )
   }

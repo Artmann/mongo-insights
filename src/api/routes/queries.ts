@@ -1,8 +1,7 @@
-import dayjs from 'dayjs'
 import { Hono } from 'hono'
 
 import type { ProfileRow } from '../../collector/buffer.ts'
-import { downloadProfiles } from '../../collector/storage.ts'
+import { fetchRows, getDateRange } from '../lib/fetch-profiles.ts'
 import { normalizeStatement } from '../normalize-statement.ts'
 
 const queries = new Hono()
@@ -48,28 +47,6 @@ queries.post('/', async (context) => {
 
   return context.json({ queries: paged, total, page, pageSize })
 })
-
-function getDateRange(timeRangeSeconds: number): string[] {
-  const days = Math.ceil(timeRangeSeconds / 86400)
-  const dates: string[] = []
-
-  for (let i = 0; i < days; i++) {
-    dates.push(dayjs().subtract(i, 'day').format('YYYY-MM-DD'))
-  }
-
-  return dates
-}
-
-async function fetchRows(
-  database: string,
-  dates: string[]
-): Promise<ProfileRow[]> {
-  const results = await Promise.all(
-    dates.map((date) => downloadProfiles(database, date))
-  )
-
-  return results.flatMap((result) => result.rows)
-}
 
 function groupByQueryShape(rows: ProfileRow[]): Map<string, ProfileRow[]> {
   const groups = new Map<string, ProfileRow[]>()
