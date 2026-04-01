@@ -110,7 +110,7 @@ async function poll(client: MongoClient, databases: string[]) {
   }
 }
 
-async function collectProfiles(client: MongoClient, dbName: string) {
+export async function collectProfiles(client: MongoClient, dbName: string) {
   const db = client.db(dbName)
   const date = dayjs().format('YYYY-MM-DD')
 
@@ -134,7 +134,7 @@ async function collectProfiles(client: MongoClient, dbName: string) {
   const newest = profiles[0]?.ts
 
   if (newest) {
-    lastSeenTs.set(dbName, dayjs(newest).toDate())
+    lastSeenTs.set(dbName, newest)
   }
 
   log.info(`${dbName} — ${profiles.length} new profile entries`)
