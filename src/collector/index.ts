@@ -110,7 +110,7 @@ export async function collectProfiles(client: MongoClient, dbName: string) {
   const profiles = await db
     .collection('system.profile')
     .find(filter)
-    .sort({ ts: -1 })
+    .sort({ ts: 1 })
     .limit(profileLimit)
     .toArray()
 
@@ -120,7 +120,7 @@ export async function collectProfiles(client: MongoClient, dbName: string) {
     return
   }
 
-  const newest = profiles[0]?.ts
+  const newest = profiles[profiles.length - 1]?.ts
 
   if (newest) {
     lastSeenTs.set(dbName, newest)
