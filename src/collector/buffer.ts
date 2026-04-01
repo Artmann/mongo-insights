@@ -1,4 +1,6 @@
+import dayjs from 'dayjs'
 import type { Document } from 'mongodb'
+import { log } from 'tiny-typescript-logger'
 
 export type ProfileRow = {
   client: string
@@ -55,8 +57,8 @@ export function initializeBuffer(
   seen.set(key, keys)
   etags.set(key, etag)
 
-  console.log(
-    `[buffer] Initialized ${dbName} for ${date} with ${existingRows.length} existing rows`
+  log.info(
+    `Initialized ${dbName} for ${date} with ${existingRows.length} existing rows`
   )
 }
 
@@ -64,7 +66,7 @@ export function addEntries(
   dbName: string,
   entries: Document[]
 ): { rows: ProfileRow[]; changed: boolean } {
-  const date = new Date().toISOString().slice(0, 10)
+  const date = dayjs().format('YYYY-MM-DD')
   const key = bufferKey(dbName, date)
 
   if (!buffers.has(key)) {
@@ -106,7 +108,7 @@ function toProfileRow(dbName: string, entry: Document): ProfileRow {
     planSummary: entry.planSummary ?? '',
     queryHash: entry.queryHash ?? '',
     responseLength: entry.responseLength ?? 0,
-    ts: entry.ts ? new Date(entry.ts).toISOString() : '',
+    ts: entry.ts ? dayjs(entry.ts).toISOString() : '',
     user: entry.user ?? ''
   }
 }

@@ -1,4 +1,6 @@
 import { Hono } from 'hono'
+import { log } from 'tiny-typescript-logger'
+
 import { startCollector } from './collector/index.ts'
 import api from './api/index.ts'
 
@@ -42,7 +44,7 @@ if (isProd) {
 }
 
 // Start collector (runs in background, don't block server startup)
-startCollector().catch((err) => console.error('[collector] Fatal error:', err))
+startCollector().catch((error) => log.fatal('Collector fatal error:', error))
 
 // Start server
 export default {
@@ -50,4 +52,4 @@ export default {
   fetch: app.fetch
 }
 
-console.log(`[server] Running on http://localhost:${port}`)
+log.info(`Running on http://localhost:${port}`)

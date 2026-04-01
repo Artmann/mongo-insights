@@ -11,6 +11,7 @@ import {
   WriterPropertiesBuilder,
   Compression
 } from 'parquet-wasm/node'
+import { log } from 'tiny-typescript-logger'
 
 import type { ProfileRow } from './buffer.ts'
 
@@ -48,9 +49,7 @@ export async function downloadProfiles(
     const rows = fromParquet(body)
     const etag = response.ETag ?? null
 
-    console.log(
-      `[storage] Downloaded ${key} (${rows.length} rows, etag: ${etag})`
-    )
+    log.info(`Downloaded ${key} (${rows.length} rows, etag: ${etag})`)
 
     return { rows, etag }
   } catch (error: unknown) {
@@ -92,14 +91,14 @@ export async function uploadProfiles(
     const response = await s3.send(new PutObjectCommand(command))
     const newEtag = response.ETag ?? null
 
-    console.log(
-      `[storage] Uploaded ${key} (${rows.length} rows, ${buffer.byteLength} bytes)`
+    log.info(
+      `Uploaded ${key} (${rows.length} rows, ${buffer.byteLength} bytes)`
     )
 
     return { status: 'ok', etag: newEtag }
   } catch (error: unknown) {
     if (isPreconditionFailedError(error)) {
-      console.warn(`[storage] Write conflict on ${key}, will retry`)
+      log.warn(`Write conflict on ${key}, will retry`)
 
       return { status: 'conflict' }
     }
