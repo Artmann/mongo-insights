@@ -26,6 +26,8 @@ queries.post('/', async (context) => {
   const timeRange = (body.timeRange as number) ?? 86400
   const page = (body.page as number) ?? 1
   const pageSize = (body.pageSize as number) ?? 25
+  const sortBy = (body.sortBy as string) ?? 'totalTime'
+  const sortDirection = (body.sortDirection as string) ?? 'desc'
 
   if (!database) {
     return context.json({ error: 'database is required' }, 400)
@@ -37,9 +39,28 @@ queries.post('/', async (context) => {
   const grouped = groupByQueryShape(rows)
   const totalRuntime = rows.reduce((sum, row) => sum + row.millis, 0)
 
+  const sortableKeys: (keyof QueryStats)[] = [
+    'count',
+    'documentsRead',
+    'documentsReturned',
+    'p50Latency',
+    'p99Latency',
+    'percentOfRuntime',
+    'responseSize',
+    'totalTime'
+  ]
+
+  const sortKey = sortableKeys.includes(sortBy as keyof QueryStats)
+    ? (sortBy as keyof QueryStats)
+    : 'totalTime'
+
+  const direction = sortDirection === 'asc' ? 1 : -1
+
   const aggregated = Array.from(grouped.entries())
     .map(([key, group]) => aggregate(key, group, totalRuntime))
-    .sort((a, b) => b.totalTime - a.totalTime)
+    .sort(
+      (a, b) => direction * ((a[sortKey] as number) - (b[sortKey] as number))
+    )
 
   const total = aggregated.length
   const start = (page - 1) * pageSize

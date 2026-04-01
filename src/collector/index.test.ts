@@ -83,7 +83,12 @@ describe('collectProfiles', () => {
 
   test('sorts ascending so oldest unseen entries are fetched first', async () => {
     mockToArray.mockResolvedValueOnce([
-      { ts: new Date('2026-04-01T12:00:00Z'), ns: 'mydb.users', op: 'query', millis: 5 }
+      {
+        ts: new Date('2026-04-01T12:00:00Z'),
+        ns: 'mydb.users',
+        op: 'query',
+        millis: 5
+      }
     ])
 
     await collectProfiles(mockClient, 'testdb')

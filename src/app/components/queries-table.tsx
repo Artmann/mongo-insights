@@ -1,4 +1,11 @@
-import { ChevronLeft, ChevronRight, TriangleAlert } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  TriangleAlert
+} from 'lucide-react'
 import { useSearchParams } from 'react-router'
 
 import { Button } from '@/components/ui/button'
@@ -15,7 +22,7 @@ import {
   TooltipContent,
   TooltipTrigger
 } from '@/components/ui/tooltip'
-import { useQueries } from '@/hooks/use-queries'
+import { useQueries, type SortDirection } from '@/hooks/use-queries'
 
 function formatNumber(value: number): string {
   return value.toLocaleString()
@@ -33,6 +40,68 @@ function formatTime(seconds: number): string {
   return formatNumber(Math.round(seconds))
 }
 
+type SortKey =
+  | 'count'
+  | 'documentsRead'
+  | 'documentsReturned'
+  | 'p50Latency'
+  | 'p99Latency'
+  | 'percentOfRuntime'
+  | 'totalTime'
+
+function SortIcon({
+  active,
+  direction
+}: {
+  active: boolean
+  direction: SortDirection
+}) {
+  if (!active) {
+    return <ArrowUpDown className="size-3.5 text-muted-foreground/50" />
+  }
+
+  if (direction === 'asc') {
+    return <ArrowUp className="size-3.5" />
+  }
+
+  return <ArrowDown className="size-3.5" />
+}
+
+interface SortableHeaderProps {
+  children: React.ReactNode
+  className?: string
+  currentDirection: SortDirection
+  currentSort: string
+  onClick: (key: SortKey) => void
+  sortKey: SortKey
+}
+
+function SortableHeader({
+  children,
+  className,
+  currentDirection,
+  currentSort,
+  onClick,
+  sortKey
+}: SortableHeaderProps) {
+  const active = currentSort === sortKey
+
+  return (
+    <TableHead className={className}>
+      <button
+        className="inline-flex w-full cursor-pointer items-center gap-1"
+        onClick={() => onClick(sortKey)}
+      >
+        {children}
+        <SortIcon
+          active={active}
+          direction={currentDirection}
+        />
+      </button>
+    </TableHead>
+  )
+}
+
 interface QueriesTableProps {
   database: string
   timeRange: number
@@ -43,6 +112,9 @@ export function QueriesTable({ database, timeRange }: QueriesTableProps) {
 
   const page = Math.max(1, Number(searchParams.get('page')) || 1)
   const pageSize = 25
+  const sortBy = (searchParams.get('sortBy') ?? 'totalTime') as SortKey
+  const sortDirection = (searchParams.get('sortDirection') ??
+    'desc') as SortDirection
 
   function setPage(newPage: number) {
     const next = new URLSearchParams(searchParams)
@@ -56,10 +128,29 @@ export function QueriesTable({ database, timeRange }: QueriesTableProps) {
     setSearchParams(next)
   }
 
+  function toggleSort(key: SortKey) {
+    const next = new URLSearchParams(searchParams)
+
+    if (sortBy === key) {
+      const newDirection = sortDirection === 'desc' ? 'asc' : 'desc'
+
+      next.set('sortDirection', newDirection)
+    } else {
+      next.set('sortBy', key)
+      next.set('sortDirection', 'desc')
+    }
+
+    next.delete('page')
+
+    setSearchParams(next)
+  }
+
   const { data, isLoading } = useQueries({
     database,
     page,
     pageSize,
+    sortBy,
+    sortDirection,
     timeRange
   })
 
@@ -83,6 +174,12 @@ export function QueriesTable({ database, timeRange }: QueriesTableProps) {
     )
   }
 
+  const headerProps = {
+    currentDirection: sortDirection,
+    currentSort: sortBy,
+    onClick: toggleSort
+  }
+
   return (
     <div>
       <Table>
@@ -90,13 +187,55 @@ export function QueriesTable({ database, timeRange }: QueriesTableProps) {
           <TableRow>
             <TableHead className="w-6"></TableHead>
             <TableHead className="min-w-[300px]">Query</TableHead>
-            <TableHead className="text-right">% of runtime</TableHead>
-            <TableHead className="text-right">Count</TableHead>
-            <TableHead className="text-right">Total time (s)</TableHead>
-            <TableHead className="text-right">p50 latency (ms)</TableHead>
-            <TableHead className="text-right">p99 latency (ms)</TableHead>
-            <TableHead className="text-right">Docs read</TableHead>
-            <TableHead className="text-right">Docs returned</TableHead>
+            <SortableHeader
+              className="text-right"
+              sortKey="percentOfRuntime"
+              {...headerProps}
+            >
+              % of runtime
+            </SortableHeader>
+            <SortableHeader
+              className="text-right"
+              sortKey="count"
+              {...headerProps}
+            >
+              Count
+            </SortableHeader>
+            <SortableHeader
+              className="text-right"
+              sortKey="totalTime"
+              {...headerProps}
+            >
+              Total time (s)
+            </SortableHeader>
+            <SortableHeader
+              className="text-right"
+              sortKey="p50Latency"
+              {...headerProps}
+            >
+              p50 latency (ms)
+            </SortableHeader>
+            <SortableHeader
+              className="text-right"
+              sortKey="p99Latency"
+              {...headerProps}
+            >
+              p99 latency (ms)
+            </SortableHeader>
+            <SortableHeader
+              className="text-right"
+              sortKey="documentsRead"
+              {...headerProps}
+            >
+              Docs read
+            </SortableHeader>
+            <SortableHeader
+              className="text-right"
+              sortKey="documentsReturned"
+              {...headerProps}
+            >
+              Docs returned
+            </SortableHeader>
           </TableRow>
         </TableHeader>
 

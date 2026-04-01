@@ -27,7 +27,9 @@ for (const row of rows) {
 
   console.log(`[${timestamp}] ${row.millis}ms ${row.ns} ${row.op}`)
   console.log(`  ${row.command}`)
-  console.log(`  plan: ${row.planSummary}  docs: ${row.docsExamined} read, ${row.nreturned} returned`)
+  console.log(
+    `  plan: ${row.planSummary}  docs: ${row.docsExamined} read, ${row.nreturned} returned`
+  )
   console.log()
 
   totalMillis += row.millis
@@ -38,5 +40,7 @@ const p50 = millis[Math.ceil(millis.length * 0.5) - 1] ?? 0
 const p99 = millis[Math.ceil(millis.length * 0.99) - 1] ?? 0
 
 console.log('---')
-console.log(`Total: ${rows.length} queries, ${(totalMillis / 1000).toFixed(2)}s total time`)
+console.log(
+  `Total: ${rows.length} queries, ${(totalMillis / 1000).toFixed(2)}s total time`
+)
 console.log(`Latency: p50 ${p50}ms, p99 ${p99}ms`)
