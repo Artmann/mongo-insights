@@ -1,8 +1,35 @@
 import { useEffect } from 'react'
 import { useParams } from 'react-router'
 
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle
+} from '@/components/ui/empty'
 import { useDatabases } from '@/hooks/use-databases'
 import { setLastDatabase } from '@/lib/last-database'
+
+function BarChartIcon(props: React.ComponentProps<'svg'>) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <line x1="12" x2="12" y1="20" y2="10" />
+      <line x1="18" x2="18" y1="20" y2="4" />
+      <line x1="6" x2="6" y1="20" y2="16" />
+    </svg>
+  )
+}
 
 export function DatabasePage() {
   const { databaseName } = useParams()
@@ -18,20 +45,30 @@ export function DatabasePage() {
 
   if (database && !database.profilingEnabled) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-24">
-        <h2 className="text-xl font-semibold">Profiling is not enabled</h2>
-        <p className="max-w-md text-center text-muted-foreground">
-          To start collecting query insights for{' '}
-          <span className="font-medium text-foreground">{databaseName}</span>,
-          enable profiling in your MongoDB shell:
-        </p>
-        <pre className="rounded-lg bg-muted px-6 py-4 text-sm">
-          db.setProfilingLevel(1)
-        </pre>
-        <p className="text-sm text-muted-foreground">
-          This logs queries slower than 100ms. Use level 2 to log all queries.
-        </p>
-      </div>
+      <Empty className="min-h-[calc(100vh-12rem)]">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <BarChartIcon />
+          </EmptyMedia>
+
+          <EmptyTitle>Profiling is not enabled</EmptyTitle>
+
+          <EmptyDescription>
+            Enable profiling for{' '}
+            <span className="font-medium text-foreground">{databaseName}</span>
+            {' '}to start collecting query insights.
+          </EmptyDescription>
+        </EmptyHeader>
+
+        <EmptyContent>
+          <pre className="rounded-lg bg-muted px-6 py-3 text-sm">
+            db.setProfilingLevel(1)
+          </pre>
+          <p className="text-xs text-muted-foreground">
+            Logs queries slower than 100ms. Use level 2 to log all queries.
+          </p>
+        </EmptyContent>
+      </Empty>
     )
   }
 
