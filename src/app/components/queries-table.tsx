@@ -1,14 +1,26 @@
+import { Fragment, useState } from 'react'
+
 import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  SearchX,
   TriangleAlert
 } from 'lucide-react'
 import { useSearchParams } from 'react-router'
 
 import { Button } from '@/components/ui/button'
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle
+} from '@/components/ui/empty'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -22,6 +34,7 @@ import {
   TooltipContent,
   TooltipTrigger
 } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
 import { useQueries, type SortDirection } from '@/hooks/use-queries'
 
 function formatNumber(value: number): string {
@@ -108,6 +121,7 @@ interface QueriesTableProps {
 }
 
 export function QueriesTable({ database, timeRange }: QueriesTableProps) {
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
 
   const page = Math.max(1, Number(searchParams.get('page')) || 1)
@@ -160,17 +174,84 @@ export function QueriesTable({ database, timeRange }: QueriesTableProps) {
 
   if (isLoading) {
     return (
-      <div className="py-12 text-center text-muted-foreground">
-        Loading queries...
+      <div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-6"></TableHead>
+              <TableHead className="min-w-[300px]">Query</TableHead>
+              <TableHead className="text-right">% of runtime</TableHead>
+              <TableHead className="text-right">Count</TableHead>
+              <TableHead className="text-right">Total time (s)</TableHead>
+              <TableHead className="hidden text-right md:table-cell">
+                p50 latency (ms)
+              </TableHead>
+              <TableHead className="hidden text-right md:table-cell">
+                p99 latency (ms)
+              </TableHead>
+              <TableHead className="hidden text-right lg:table-cell">
+                Docs read
+              </TableHead>
+              <TableHead className="hidden text-right lg:table-cell">
+                Docs returned
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {Array.from({ length: 5 }, (_, index) => (
+              <TableRow key={index}>
+                <TableCell className="w-6">
+                  <Skeleton className="size-4" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-64" />
+                </TableCell>
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-4 w-12" />
+                </TableCell>
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-4 w-10" />
+                </TableCell>
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-4 w-10" />
+                </TableCell>
+                <TableCell className="hidden text-right md:table-cell">
+                  <Skeleton className="ml-auto h-4 w-12" />
+                </TableCell>
+                <TableCell className="hidden text-right md:table-cell">
+                  <Skeleton className="ml-auto h-4 w-12" />
+                </TableCell>
+                <TableCell className="hidden text-right lg:table-cell">
+                  <Skeleton className="ml-auto h-4 w-10" />
+                </TableCell>
+                <TableCell className="hidden text-right lg:table-cell">
+                  <Skeleton className="ml-auto h-4 w-10" />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
     )
   }
 
   if (queries.length === 0) {
     return (
-      <div className="py-12 text-center text-muted-foreground">
-        No queries recorded in this time range.
-      </div>
+      <Empty className="py-12">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <SearchX />
+          </EmptyMedia>
+
+          <EmptyTitle>No queries recorded</EmptyTitle>
+
+          <EmptyDescription>
+            No queries were found in this time range. Try selecting a wider
+            range or verify that profiling is enabled.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     )
   }
 
@@ -209,28 +290,28 @@ export function QueriesTable({ database, timeRange }: QueriesTableProps) {
               Total time (s)
             </SortableHeader>
             <SortableHeader
-              className="text-right"
+              className="hidden text-right md:table-cell"
               sortKey="p50Latency"
               {...headerProps}
             >
               p50 latency (ms)
             </SortableHeader>
             <SortableHeader
-              className="text-right"
+              className="hidden text-right md:table-cell"
               sortKey="p99Latency"
               {...headerProps}
             >
               p99 latency (ms)
             </SortableHeader>
             <SortableHeader
-              className="text-right"
+              className="hidden text-right lg:table-cell"
               sortKey="documentsRead"
               {...headerProps}
             >
               Docs read
             </SortableHeader>
             <SortableHeader
-              className="text-right"
+              className="hidden text-right lg:table-cell"
               sortKey="documentsReturned"
               {...headerProps}
             >
@@ -240,46 +321,92 @@ export function QueriesTable({ database, timeRange }: QueriesTableProps) {
         </TableHeader>
 
         <TableBody>
-          {queries.map((query, index) => (
-            <TableRow key={index}>
-              <TableCell className="w-6 pr-0">
-                {query.planSummary === 'COLLSCAN' && (
-                  <Tooltip>
-                    <TooltipTrigger className="cursor-default">
-                      <TriangleAlert className="size-4 text-amber-500" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      No index used (collection scan)
-                    </TooltipContent>
-                  </Tooltip>
+          {queries.map((query, index) => {
+            const isExpanded = expandedIndex === index
+
+            return (
+              <Fragment key={index}>
+                <TableRow
+                  aria-expanded={isExpanded}
+                  className="cursor-pointer"
+                  onClick={() => setExpandedIndex(isExpanded ? null : index)}
+                >
+                  <TableCell className="w-6 pr-0">
+                    <ChevronDown
+                      className={cn(
+                        'size-3.5 text-muted-foreground transition-transform',
+                        !isExpanded && '-rotate-90'
+                      )}
+                    />
+                  </TableCell>
+                  <TableCell className="max-w-[400px] truncate font-mono text-xs">
+                    <span className="inline-flex items-center gap-1.5">
+                      {query.planSummary === 'COLLSCAN' && (
+                        <Tooltip>
+                          <TooltipTrigger
+                            className="cursor-default"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <TriangleAlert className="size-3.5 shrink-0 text-amber-500" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            No index used (collection scan)
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                      <span className="truncate">
+                        {query.normalizedStatement}
+                      </span>
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {formatPercent(query.percentOfRuntime)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {formatNumber(query.count)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {formatTime(query.totalTime)}
+                  </TableCell>
+                  <TableCell className="hidden text-right md:table-cell">
+                    {formatNumber(query.p50Latency)}
+                  </TableCell>
+                  <TableCell className="hidden text-right md:table-cell">
+                    {formatNumber(query.p99Latency)}
+                  </TableCell>
+                  <TableCell className="hidden text-right lg:table-cell">
+                    {formatNumber(query.documentsRead)}
+                  </TableCell>
+                  <TableCell className="hidden text-right lg:table-cell">
+                    {formatNumber(query.documentsReturned)}
+                  </TableCell>
+                </TableRow>
+
+                {isExpanded && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={9}
+                      className="bg-muted/30 px-8 py-4"
+                    >
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground">
+                          Full query
+                        </p>
+
+                        <pre className="overflow-x-auto rounded-lg bg-muted p-4 font-mono text-xs whitespace-pre-wrap break-all">
+                          {query.normalizedStatement}
+                        </pre>
+
+                        <p className="text-xs text-muted-foreground">
+                          Plan: {query.planSummary}
+                        </p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 )}
-              </TableCell>
-              <TableCell className="max-w-[400px] truncate font-mono text-xs">
-                {query.normalizedStatement}
-              </TableCell>
-              <TableCell className="text-right">
-                {formatPercent(query.percentOfRuntime)}
-              </TableCell>
-              <TableCell className="text-right">
-                {formatNumber(query.count)}
-              </TableCell>
-              <TableCell className="text-right">
-                {formatTime(query.totalTime)}
-              </TableCell>
-              <TableCell className="text-right">
-                {formatNumber(query.p50Latency)}
-              </TableCell>
-              <TableCell className="text-right">
-                {formatNumber(query.p99Latency)}
-              </TableCell>
-              <TableCell className="text-right">
-                {formatNumber(query.documentsRead)}
-              </TableCell>
-              <TableCell className="text-right">
-                {formatNumber(query.documentsReturned)}
-              </TableCell>
-            </TableRow>
-          ))}
+              </Fragment>
+            )
+          })}
         </TableBody>
       </Table>
 

@@ -150,7 +150,9 @@ describe('DatabasePage', () => {
   test('shows loading state while queries are fetching', () => {
     renderPage('mydb')
 
-    expect(screen.getByText('Loading queries...')).toBeTruthy()
+    const skeletons = document.querySelectorAll('[data-slot="skeleton"]')
+
+    expect(skeletons.length).toBeGreaterThan(0)
   })
 
   test('shows empty state when no queries exist', () => {
@@ -161,9 +163,7 @@ describe('DatabasePage', () => {
 
     renderPage('mydb')
 
-    expect(
-      screen.getByText('No queries recorded in this time range.')
-    ).toBeTruthy()
+    expect(screen.getByText('No queries recorded')).toBeTruthy()
   })
 
   test('renders query rows in the table', () => {
@@ -221,8 +221,8 @@ describe('DatabasePage', () => {
     const collscanRow = rows[1]
     const indexedRow = rows[2]
 
-    expect(collscanRow?.querySelector('svg')).toBeTruthy()
-    expect(indexedRow?.querySelector('svg')).toBeNull()
+    expect(collscanRow?.querySelector('[class*="text-amber"]')).toBeTruthy()
+    expect(indexedRow?.querySelector('[class*="text-amber"]')).toBeNull()
   })
 
   test('shows pagination controls when there are multiple pages', () => {
@@ -329,7 +329,9 @@ describe('DatabasePage', () => {
 
     renderPage('mydb')
 
-    expect(screen.getByText('Loading chart...')).toBeTruthy()
+    const skeletons = document.querySelectorAll('[data-slot="skeleton"]')
+
+    expect(skeletons.length).toBeGreaterThan(0)
   })
 
   test('shows empty chart state when no latency data', () => {
@@ -340,6 +342,6 @@ describe('DatabasePage', () => {
 
     renderPage('mydb')
 
-    expect(screen.getByText('No latency data available.')).toBeTruthy()
+    expect(screen.getByText('No latency data available')).toBeTruthy()
   })
 })
