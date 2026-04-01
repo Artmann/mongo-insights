@@ -134,7 +134,7 @@ async function collectProfiles(client: MongoClient, dbName: string) {
   const newest = profiles[0]?.ts
 
   if (newest) {
-    lastSeenTs.set(dbName, dayjs(newest).toDate())
+    lastSeenTs.set(dbName, newest)
   }
 
   log.info(`${dbName} — ${profiles.length} new profile entries`)
