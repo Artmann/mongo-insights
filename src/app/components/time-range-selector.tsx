@@ -19,7 +19,9 @@ export function useTimeRange(): number {
 }
 
 export function timeRangeLabel(seconds: number): string {
-  const option = timeRangeOptions.find((o) => o.seconds === seconds)
+  const option = timeRangeOptions.find(
+    (candidate) => candidate.seconds === seconds
+  )
 
   return option?.label ?? '24h'
 }
