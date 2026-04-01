@@ -109,21 +109,21 @@ export async function uploadProfiles(
 
 function toParquet(rows: ProfileRow[]): Uint8Array {
   const table = tableFromArrays({
-    ts: rows.map((r) => r.ts),
-    database: rows.map((r) => r.database),
-    op: rows.map((r) => r.op),
-    ns: rows.map((r) => r.ns),
-    millis: Int32Array.from(rows.map((r) => r.millis)),
-    planSummary: rows.map((r) => r.planSummary),
-    docsExamined: Int32Array.from(rows.map((r) => r.docsExamined)),
-    keysExamined: Int32Array.from(rows.map((r) => r.keysExamined)),
-    nreturned: Int32Array.from(rows.map((r) => r.nreturned)),
-    responseLength: Int32Array.from(rows.map((r) => r.responseLength)),
-    client: rows.map((r) => r.client),
-    user: rows.map((r) => r.user),
-    queryHash: rows.map((r) => r.queryHash),
-    command: rows.map((r) => r.command),
-    execStats: rows.map((r) => r.execStats)
+    ts: rows.map((row) => row.ts),
+    database: rows.map((row) => row.database),
+    op: rows.map((row) => row.op),
+    ns: rows.map((row) => row.ns),
+    millis: Int32Array.from(rows.map((row) => row.millis)),
+    planSummary: rows.map((row) => row.planSummary),
+    docsExamined: Int32Array.from(rows.map((row) => row.docsExamined)),
+    keysExamined: Int32Array.from(rows.map((row) => row.keysExamined)),
+    nreturned: Int32Array.from(rows.map((row) => row.nreturned)),
+    responseLength: Int32Array.from(rows.map((row) => row.responseLength)),
+    client: rows.map((row) => row.client),
+    user: rows.map((row) => row.user),
+    queryHash: rows.map((row) => row.queryHash),
+    command: rows.map((row) => row.command),
+    execStats: rows.map((row) => row.execStats)
   })
 
   const ipcStream = tableToIPC(table, 'stream')
@@ -170,8 +170,7 @@ function isNoSuchKeyError(error: unknown): boolean {
   return (
     typeof error === 'object' &&
     error !== null &&
-    'name' in error &&
-    (error as { name: string }).name === 'NoSuchKey'
+    (error as { name?: string }).name === 'NoSuchKey'
   )
 }
 
@@ -179,8 +178,7 @@ function isPreconditionFailedError(error: unknown): boolean {
   return (
     typeof error === 'object' &&
     error !== null &&
-    '$metadata' in error &&
-    (error as { $metadata: { httpStatusCode?: number } }).$metadata
-      .httpStatusCode === 412
+    (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+      ?.httpStatusCode === 412
   )
 }

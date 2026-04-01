@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 
 import type { ProfileRow } from '../../collector/buffer.ts'
+import { percentile } from '../../lib/percentile.ts'
 import { fetchRows, getDateRange } from '../lib/fetch-profiles.ts'
 import { normalizeStatement } from '../normalize-statement.ts'
 
@@ -106,16 +107,6 @@ function aggregate(
     planSummary: mostCommon(rows.map((row) => row.planSummary)),
     responseSize: rows.reduce((sum, row) => sum + row.responseLength, 0)
   }
-}
-
-function percentile(sorted: number[], p: number): number {
-  if (sorted.length === 0) {
-    return 0
-  }
-
-  const index = Math.ceil((p / 100) * sorted.length) - 1
-
-  return sorted[Math.max(0, index)] ?? 0
 }
 
 function mostCommon(values: string[]): string {

@@ -1,10 +1,9 @@
 import { Hono } from 'hono'
 
 import { getClient } from '../../db.ts'
+import { systemDatabases } from '../../lib/system-databases.ts'
 
 const databases = new Hono()
-
-const systemDatabases = ['admin', 'config', 'local']
 
 databases.get('/', async (context) => {
   const client = await getClient()

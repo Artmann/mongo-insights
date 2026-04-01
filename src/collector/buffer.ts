@@ -81,6 +81,7 @@ export function addEntries(
   if (!buffer || !keys) {
     throw new Error(`Buffer not initialized for ${key}`)
   }
+
   let changed = false
 
   for (const entry of entries) {
