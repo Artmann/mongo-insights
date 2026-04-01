@@ -1,6 +1,7 @@
 import dayjs from 'dayjs'
 import { Hono } from 'hono'
 
+import { percentile } from '../../lib/percentile.ts'
 import { fetchRows, getDateRange } from '../lib/fetch-profiles.ts'
 
 const latencyTimeseries = new Hono()
@@ -66,15 +67,5 @@ latencyTimeseries.post('/', async (context) => {
 
   return context.json({ buckets })
 })
-
-function percentile(sorted: number[], p: number): number {
-  if (sorted.length === 0) {
-    return 0
-  }
-
-  const index = Math.ceil((p / 100) * sorted.length) - 1
-
-  return sorted[Math.max(0, index)] ?? 0
-}
 
 export default latencyTimeseries

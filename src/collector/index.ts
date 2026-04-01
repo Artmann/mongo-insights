@@ -3,12 +3,12 @@ import type { MongoClient } from 'mongodb'
 import { log } from 'tiny-typescript-logger'
 
 import { getClient } from '../db.ts'
+import { systemDatabases } from '../lib/system-databases.ts'
 import { addEntries, getEtag, initializeBuffer, setEtag } from './buffer.ts'
 import { downloadProfiles, uploadProfiles } from './storage.ts'
 
 const pollInterval = 30_000
 const profileLimit = 100
-const systemDatabases = ['admin', 'local', 'config']
 
 const lastSeenTs = new Map<string, Date>()
 
@@ -46,7 +46,7 @@ async function listDatabases(client: MongoClient): Promise<string[]> {
   const result = await admin.command({ listDatabases: 1, nameOnly: true })
 
   return (result.databases as { name: string }[])
-    .map((d) => d.name)
+    .map((database) => database.name)
     .filter((name) => !systemDatabases.includes(name))
 }
 
