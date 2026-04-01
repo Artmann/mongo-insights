@@ -1,4 +1,2 @@
-bun typecheck
-bun test
-bun format
+bun typecheck && bun test && bun format
 

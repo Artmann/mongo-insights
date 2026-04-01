@@ -228,7 +228,7 @@ describe('DatabasePage', () => {
     expect(screen.getByText('Next')).toBeTruthy()
   })
 
-  test('hides pagination when results fit on one page', () => {
+  test('shows pagination controls even on single page', () => {
     mockUseQueries.mockReturnValue({
       data: {
         queries: [makeQuery()],
@@ -241,8 +241,9 @@ describe('DatabasePage', () => {
 
     renderPage('mydb')
 
-    expect(screen.queryByText('Previous')).toBeNull()
-    expect(screen.queryByText('Next')).toBeNull()
+    expect(screen.getByText('Page 1 of 1')).toBeTruthy()
+    expect(screen.getByText('Previous')).toBeTruthy()
+    expect(screen.getByText('Next')).toBeTruthy()
   })
 
   test('formats large numbers with separators', () => {

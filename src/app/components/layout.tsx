@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router'
 
 import { DatabaseCombobox } from './database-combobox'
+import { ErrorBoundary } from './error-boundary'
 
 export function Layout() {
   return (
@@ -12,7 +13,9 @@ export function Layout() {
       </header>
 
       <main className="w-full max-w-7xl mx-auto p-6">
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   )

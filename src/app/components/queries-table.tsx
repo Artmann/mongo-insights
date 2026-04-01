@@ -1,5 +1,5 @@
-import { useState } from 'react'
 import { ChevronLeft, ChevronRight, TriangleAlert } from 'lucide-react'
+import { useSearchParams } from 'react-router'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -38,8 +38,14 @@ interface QueriesTableProps {
 }
 
 export function QueriesTable({ database }: QueriesTableProps) {
-  const [page, setPage] = useState(1)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const page = Math.max(1, Number(searchParams.get('page')) || 1)
   const pageSize = 25
+
+  function setPage(newPage: number) {
+    setSearchParams(newPage === 1 ? {} : { page: String(newPage) })
+  }
 
   const { data, isLoading } = useQueries({ database, page, pageSize })
 
@@ -124,35 +130,33 @@ export function QueriesTable({ database }: QueriesTableProps) {
         </TableBody>
       </Table>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between border-t px-2 py-4">
-          <p className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
-          </p>
+      <div className="flex items-center justify-between border-t px-2 py-4">
+        <p className="text-sm text-muted-foreground">
+          Page {page} of {totalPages}
+        </p>
 
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage(page - 1)}
-            >
-              <ChevronLeft />
-              Previous
-            </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage(page - 1)}
+          >
+            <ChevronLeft />
+            Previous
+          </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page >= totalPages}
-              onClick={() => setPage(page + 1)}
-            >
-              Next
-              <ChevronRight />
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= totalPages}
+            onClick={() => setPage(page + 1)}
+          >
+            Next
+            <ChevronRight />
+          </Button>
         </div>
-      )}
+      </div>
     </div>
   )
 }
