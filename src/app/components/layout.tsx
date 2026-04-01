@@ -1,9 +1,12 @@
 import { Outlet } from 'react-router'
 
+import { useTheme } from '../hooks/use-theme'
 import { DatabaseCombobox } from './database-combobox'
 import { ErrorBoundary } from './error-boundary'
 
 export function Layout() {
+  useTheme()
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b">
