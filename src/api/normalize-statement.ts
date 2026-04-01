@@ -31,7 +31,9 @@ export function normalizeStatement(commandJson: string): string {
     if (key in command) {
       const value = command[key]
       const collection =
-        key === 'getMore' ? String(command['collection'] ?? '') : String(value)
+        key === 'getMore'
+          ? String(command['collection'] ?? '')
+          : String(value ?? '')
 
       const filter = command['filter'] ?? command['query'] ?? null
 

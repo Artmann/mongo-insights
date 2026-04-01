@@ -16,7 +16,7 @@ export function RootRedirect() {
     const databases = data?.databases ?? []
 
     if (databases.length === 0) {
-      navigate('/setup', { replace: true })
+      void navigate('/setup', { replace: true })
 
       return
     }
@@ -25,7 +25,7 @@ export function RootRedirect() {
     const match = databases.find((d) => d.name === last)
     const target = match?.name ?? databases[0]?.name
 
-    navigate(`/databases/${target}`, { replace: true })
+    void navigate(`/databases/${target}`, { replace: true })
   }, [data, isLoading, navigate])
 
   return null

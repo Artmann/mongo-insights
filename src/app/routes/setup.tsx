@@ -39,7 +39,7 @@ export function SetupPage() {
   const queryClient = useQueryClient()
 
   function handleRefresh() {
-    queryClient.invalidateQueries({ queryKey: ['databases'] })
+    void queryClient.invalidateQueries({ queryKey: ['databases'] })
   }
 
   return (

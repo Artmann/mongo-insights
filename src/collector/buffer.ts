@@ -75,8 +75,12 @@ export function addEntries(
     etags.set(key, null)
   }
 
-  const buffer = buffers.get(key)!
-  const keys = seen.get(key)!
+  const buffer = buffers.get(key)
+  const keys = seen.get(key)
+
+  if (!buffer || !keys) {
+    throw new Error(`Buffer not initialized for ${key}`)
+  }
   let changed = false
 
   for (const entry of entries) {
@@ -115,7 +119,7 @@ function toProfileRow(dbName: string, entry: Document): ProfileRow {
 
 function safeStringify(value: unknown): string {
   try {
-    return JSON.stringify(value) ?? ''
+    return JSON.stringify(value) || ''
   } catch {
     return ''
   }

@@ -21,7 +21,7 @@ latencyTimeseries.post('/', async (context) => {
   const body = await context.req.json()
 
   const database = body.database as string
-  const timeRange = (body.timeRange as number) ?? 86400
+  const timeRange = (body.timeRange ?? 86400) as number
 
   if (!database) {
     return context.json({ error: 'database is required' }, 400)

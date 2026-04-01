@@ -23,11 +23,11 @@ queries.post('/', async (context) => {
   const body = await context.req.json()
 
   const database = body.database as string
-  const timeRange = (body.timeRange as number) ?? 86400
-  const page = (body.page as number) ?? 1
-  const pageSize = (body.pageSize as number) ?? 25
-  const sortBy = (body.sortBy as string) ?? 'totalTime'
-  const sortDirection = (body.sortDirection as string) ?? 'desc'
+  const timeRange = (body.timeRange ?? 86400) as number
+  const page = (body.page ?? 1) as number
+  const pageSize = (body.pageSize ?? 25) as number
+  const sortBy = (body.sortBy ?? 'totalTime') as string
+  const sortDirection = (body.sortDirection ?? 'desc') as string
 
   if (!database) {
     return context.json({ error: 'database is required' }, 400)

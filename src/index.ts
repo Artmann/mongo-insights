@@ -57,7 +57,9 @@ if (isProd) {
 }
 
 // Start collector (runs in background, don't block server startup)
-startCollector().catch((error) => log.fatal('Collector fatal error:', error))
+startCollector().catch((error: unknown) =>
+  log.fatal('Collector fatal error:', error)
+)
 
 // Start server
 export default {

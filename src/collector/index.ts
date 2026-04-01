@@ -38,7 +38,7 @@ export async function startCollector() {
   }
 
   await poll(client, profilable)
-  setInterval(() => poll(client, profilable), pollInterval)
+  setInterval(() => void poll(client, profilable), pollInterval)
 }
 
 async function listDatabases(client: MongoClient): Promise<string[]> {

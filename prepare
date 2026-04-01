@@ -1,2 +1,2 @@
-bun typecheck && bun test && bun format
+bun typecheck && bun lint && bun test && bun format
 
