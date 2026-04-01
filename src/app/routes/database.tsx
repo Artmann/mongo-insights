@@ -9,6 +9,7 @@ import {
   EmptyMedia,
   EmptyTitle
 } from '@/components/ui/empty'
+import { QueriesTable } from '@/components/queries-table'
 import { useDatabases } from '@/hooks/use-databases'
 import { setLastDatabase } from '@/lib/last-database'
 
@@ -24,9 +25,24 @@ function BarChartIcon(props: React.ComponentProps<'svg'>) {
       strokeLinejoin="round"
       {...props}
     >
-      <line x1="12" x2="12" y1="20" y2="10" />
-      <line x1="18" x2="18" y1="20" y2="4" />
-      <line x1="6" x2="6" y1="20" y2="16" />
+      <line
+        x1="12"
+        x2="12"
+        y1="20"
+        y2="10"
+      />
+      <line
+        x1="18"
+        x2="18"
+        y1="20"
+        y2="4"
+      />
+      <line
+        x1="6"
+        x2="6"
+        y1="20"
+        y2="16"
+      />
     </svg>
   )
 }
@@ -55,8 +71,8 @@ export function DatabasePage() {
 
           <EmptyDescription>
             Enable profiling for{' '}
-            <span className="font-medium text-foreground">{databaseName}</span>
-            {' '}to start collecting query insights.
+            <span className="font-medium text-foreground">{databaseName}</span>{' '}
+            to start collecting query insights.
           </EmptyDescription>
         </EmptyHeader>
 
@@ -74,8 +90,15 @@ export function DatabasePage() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold">{databaseName}</h2>
-      <p className="mt-2 text-muted-foreground">Dashboard coming soon.</p>
+      <h1 className="text-2xl font-semibold">Insights</h1>
+
+      <section className="mt-8">
+        <h2 className="text-lg font-medium">Queries in the last 24 hours</h2>
+
+        <div className="mt-4">
+          <QueriesTable database={databaseName ?? ''} />
+        </div>
+      </section>
     </div>
   )
 }

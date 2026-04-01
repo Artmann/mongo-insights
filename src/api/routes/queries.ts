@@ -75,7 +75,7 @@ function groupByQueryShape(rows: ProfileRow[]): Map<string, ProfileRow[]> {
   const groups = new Map<string, ProfileRow[]>()
 
   for (const row of rows) {
-    const key = row.queryHash || normalizeStatement(row.command)
+    const key = normalizeStatement(row.command)
     const group = groups.get(key)
 
     if (group) {

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import './index.css'
 
+import { TooltipProvider } from './components/ui/tooltip'
 import { Layout } from './components/layout'
 import { DatabasePage } from './routes/database'
 import { RootRedirect } from './routes/root'
@@ -49,7 +50,9 @@ if (!container) {
 createRoot(container).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <TooltipProvider>
+        <RouterProvider router={router} />
+      </TooltipProvider>
     </QueryClientProvider>
   </StrictMode>
 )

@@ -29,10 +29,13 @@ export function normalizeStatement(commandJson: string): string {
 
   for (const key of operationKeys) {
     if (key in command) {
-      const collection = command[key]
+      const value = command[key]
+      const collection =
+        key === 'getMore' ? String(command['collection'] ?? '') : String(value)
+
       const filter = command['filter'] ?? command['query'] ?? null
 
-      const parts = [key, String(collection)]
+      const parts = [key, collection]
 
       if (filter && typeof filter === 'object' && !Array.isArray(filter)) {
         parts.push(normalizeFilter(filter as Record<string, JsonValue>))

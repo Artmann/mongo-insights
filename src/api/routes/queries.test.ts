@@ -159,8 +159,13 @@ describe('POST /api/queries', () => {
   })
 
   test('paginates results', async () => {
+    const collections = ['users', 'orders', 'products', 'logs', 'sessions']
+
     const rows = Array.from({ length: 5 }, (_, i) =>
-      makeRow({ queryHash: `hash${i}`, millis: (5 - i) * 10 })
+      makeRow({
+        millis: (5 - i) * 10,
+        command: JSON.stringify({ find: collections[i], filter: { id: 1 } })
+      })
     )
 
     mockDownloadProfiles.mockResolvedValue({ rows, etag: null })
