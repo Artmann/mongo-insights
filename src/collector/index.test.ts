@@ -39,7 +39,7 @@ mock.module('./storage.ts', () => ({
 }))
 
 mock.module('./buffer.ts', () => ({
-  addEntries: mock(() => ({ rows: [] as ProfileRow[], changed: true })),
+  addEntries: mock(() => new Map()),
   getEtag: mock(() => null),
   initializeBuffer: mock(),
   setEtag: mock()

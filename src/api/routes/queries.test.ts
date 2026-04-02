@@ -7,23 +7,14 @@ import { normalizeStatement } from '../normalize-statement.ts'
 type DuckDBConnection = Awaited<ReturnType<DuckDBInstance['connect']>>
 
 let connection: DuckDBConnection
-let currentTable = ''
 
 async function setupConnection() {
   const instance = await DuckDBInstance.create(':memory:')
 
   connection = await instance.connect()
-}
-
-async function createTable(rows: ProfileRow[]): Promise<string> {
-  if (!connection) {
-    await setupConnection()
-  }
-
-  const tableName = `test_${crypto.randomUUID().replace(/-/g, '')}`
 
   await connection.run(`
-    CREATE TEMP TABLE ${tableName} (
+    CREATE TABLE profiles (
       client VARCHAR, command VARCHAR, database VARCHAR,
       "docsExamined" INTEGER, "execStats" VARCHAR, "keysExamined" INTEGER,
       millis INTEGER, nreturned INTEGER, ns VARCHAR, op VARCHAR,
@@ -31,44 +22,48 @@ async function createTable(rows: ProfileRow[]): Promise<string> {
       ts VARCHAR, "user" VARCHAR, normalized_statement VARCHAR
     )
   `)
+}
 
-  if (rows.length > 0) {
-    const prepared = await connection.prepare(`
-      INSERT INTO ${tableName} VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
-      )
-    `)
-
-    for (const row of rows) {
-      prepared.bindVarchar(1, row.client)
-      prepared.bindVarchar(2, row.command)
-      prepared.bindVarchar(3, row.database)
-      prepared.bindInteger(4, row.docsExamined)
-      prepared.bindVarchar(5, row.execStats)
-      prepared.bindInteger(6, row.keysExamined)
-      prepared.bindInteger(7, row.millis)
-      prepared.bindInteger(8, row.nreturned)
-      prepared.bindVarchar(9, row.ns)
-      prepared.bindVarchar(10, row.op)
-      prepared.bindVarchar(11, row.planSummary)
-      prepared.bindVarchar(12, row.queryHash)
-      prepared.bindInteger(13, row.responseLength)
-      prepared.bindVarchar(14, row.ts)
-      prepared.bindVarchar(15, row.user)
-      prepared.bindVarchar(16, normalizeStatement(row.command))
-      await prepared.run()
-    }
+async function loadRows(rows: ProfileRow[]) {
+  if (!connection) {
+    await setupConnection()
   }
 
-  currentTable = tableName
+  await connection.run('DELETE FROM profiles')
 
-  return tableName
+  if (rows.length === 0) {
+    return
+  }
+
+  const prepared = await connection.prepare(`
+    INSERT INTO profiles VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+    )
+  `)
+
+  for (const row of rows) {
+    prepared.bindVarchar(1, row.client)
+    prepared.bindVarchar(2, row.command)
+    prepared.bindVarchar(3, row.database)
+    prepared.bindInteger(4, row.docsExamined)
+    prepared.bindVarchar(5, row.execStats)
+    prepared.bindInteger(6, row.keysExamined)
+    prepared.bindInteger(7, row.millis)
+    prepared.bindInteger(8, row.nreturned)
+    prepared.bindVarchar(9, row.ns)
+    prepared.bindVarchar(10, row.op)
+    prepared.bindVarchar(11, row.planSummary)
+    prepared.bindVarchar(12, row.queryHash)
+    prepared.bindInteger(13, row.responseLength)
+    prepared.bindVarchar(14, row.ts)
+    prepared.bindVarchar(15, row.user)
+    prepared.bindVarchar(16, normalizeStatement(row.command))
+    await prepared.run()
+  }
 }
 
 mock.module('../lib/duckdb.ts', () => ({
   getConnection: () => Promise.resolve(connection),
-  loadProfiles: (_database: string, _dates: string[]) =>
-    Promise.resolve(currentTable),
   queryRows: async (sql: string) => {
     const reader = await connection.runAndReadAll(sql)
     const columns = reader.columnNames()
@@ -89,9 +84,7 @@ mock.module('../lib/duckdb.ts', () => ({
       return record
     })
   },
-  cleanup: async (tableName: string) => {
-    await connection.run(`DROP TABLE IF EXISTS ${tableName}`)
-  }
+  refreshTable: () => Promise.resolve()
 }))
 
 mock.module('../../db.ts', () => ({
@@ -144,7 +137,7 @@ describe('POST /api/queries', () => {
   })
 
   test('returns empty queries when no data exists', async () => {
-    await createTable([])
+    await loadRows([])
 
     const response = await request({ database: 'mydb', timeRange: 86400 })
     const body = await response.json()
@@ -180,7 +173,7 @@ describe('POST /api/queries', () => {
       })
     ]
 
-    await createTable(rows)
+    await loadRows(rows)
 
     const response = await request({ database: 'mydb', timeRange: 86400 })
     const body = await response.json()
@@ -213,7 +206,7 @@ describe('POST /api/queries', () => {
       })
     ]
 
-    await createTable(rows)
+    await loadRows(rows)
 
     const response = await request({ database: 'mydb', timeRange: 86400 })
     const body = await response.json()
@@ -237,7 +230,7 @@ describe('POST /api/queries', () => {
       makeRow({ queryHash: 'slow', millis: 10 })
     ]
 
-    await createTable(rows)
+    await loadRows(rows)
 
     const response = await request({ database: 'mydb', timeRange: 86400 })
     const body = await response.json()
@@ -256,7 +249,7 @@ describe('POST /api/queries', () => {
       })
     )
 
-    await createTable(rows)
+    await loadRows(rows)
 
     const response = await request({
       database: 'mydb',
@@ -273,7 +266,7 @@ describe('POST /api/queries', () => {
   })
 
   test('defaults to page 1 and pageSize 25', async () => {
-    await createTable([])
+    await loadRows([])
 
     const response = await request({ database: 'mydb', timeRange: 86400 })
     const body = await response.json()
@@ -292,7 +285,7 @@ describe('POST /api/queries', () => {
       })
     ]
 
-    await createTable(rows)
+    await loadRows(rows)
 
     const response = await request({ database: 'mydb', timeRange: 86400 })
     const body = await response.json()

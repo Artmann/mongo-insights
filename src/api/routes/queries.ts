@@ -1,11 +1,7 @@
+import dayjs from 'dayjs'
 import { Hono } from 'hono'
 
-import {
-  cleanup,
-  getDateRange,
-  loadProfiles,
-  queryRows
-} from '../lib/fetch-profiles.ts'
+import { queryRows } from '../lib/fetch-profiles.ts'
 
 const queries = new Hono()
 
@@ -34,50 +30,47 @@ queries.post('/', async (context) => {
     return context.json({ error: 'database is required' }, 400)
   }
 
-  const dates = getDateRange(timeRange)
-  const tableName = await loadProfiles(database, dates)
+  const sortColumn = sortableColumns[sortBy] ?? '"totalTime"'
+  const direction = sortDirection === 'asc' ? 'ASC' : 'DESC'
+  const offset = (page - 1) * pageSize
+  const cutoff = dayjs().subtract(timeRange, 'second').toISOString()
 
-  try {
-    const sortColumn = sortableColumns[sortBy] ?? '"totalTime"'
-    const direction = sortDirection === 'asc' ? 'ASC' : 'DESC'
-    const offset = (page - 1) * pageSize
+  const rows = await queryRows(`
+    WITH totals AS (
+      SELECT COALESCE(SUM(millis), 0) AS total_runtime
+      FROM profiles
+      WHERE database = '${database}' AND ts >= '${cutoff}'
+    )
+    SELECT
+      normalized_statement AS "normalizedStatement",
+      CASE WHEN t.total_runtime > 0
+        THEN (SUM(millis)::DOUBLE / t.total_runtime) * 100
+        ELSE 0
+      END AS "percentOfRuntime",
+      COUNT(*)::INTEGER AS "count",
+      SUM(millis)::DOUBLE / 1000 AS "totalTime",
+      PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY millis)::INTEGER AS "p50Latency",
+      PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY millis)::INTEGER AS "p99Latency",
+      SUM("docsExamined")::INTEGER AS "documentsRead",
+      SUM(nreturned)::INTEGER AS "documentsReturned",
+      MODE("planSummary") AS "planSummary",
+      SUM("responseLength")::INTEGER AS "responseSize"
+    FROM profiles, totals t
+    WHERE database = '${database}' AND ts >= '${cutoff}'
+    GROUP BY normalized_statement, t.total_runtime
+    ORDER BY ${sortColumn} ${direction}
+    LIMIT ${pageSize} OFFSET ${offset}
+  `)
 
-    const rows = await queryRows(`
-      WITH totals AS (
-        SELECT COALESCE(SUM(millis), 0) AS total_runtime
-        FROM ${tableName}
-      )
-      SELECT
-        normalized_statement AS "normalizedStatement",
-        CASE WHEN t.total_runtime > 0
-          THEN (SUM(millis)::DOUBLE / t.total_runtime) * 100
-          ELSE 0
-        END AS "percentOfRuntime",
-        COUNT(*)::INTEGER AS "count",
-        SUM(millis)::DOUBLE / 1000 AS "totalTime",
-        PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY millis)::INTEGER AS "p50Latency",
-        PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY millis)::INTEGER AS "p99Latency",
-        SUM("docsExamined")::INTEGER AS "documentsRead",
-        SUM(nreturned)::INTEGER AS "documentsReturned",
-        MODE("planSummary") AS "planSummary",
-        SUM("responseLength")::INTEGER AS "responseSize"
-      FROM ${tableName}, totals t
-      GROUP BY normalized_statement, t.total_runtime
-      ORDER BY ${sortColumn} ${direction}
-      LIMIT ${pageSize} OFFSET ${offset}
-    `)
+  const totalResult = await queryRows(`
+    SELECT COUNT(DISTINCT normalized_statement)::INTEGER AS total
+    FROM profiles
+    WHERE database = '${database}' AND ts >= '${cutoff}'
+  `)
 
-    const totalResult = await queryRows(`
-      SELECT COUNT(DISTINCT normalized_statement)::INTEGER AS total
-      FROM ${tableName}
-    `)
+  const total = (totalResult[0]?.total as number) ?? 0
 
-    const total = (totalResult[0]?.total as number) ?? 0
-
-    return context.json({ queries: rows, total, page, pageSize })
-  } finally {
-    await cleanup(tableName)
-  }
+  return context.json({ queries: rows, total, page, pageSize })
 })
 
 export default queries

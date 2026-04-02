@@ -1,12 +1,7 @@
 import dayjs from 'dayjs'
 import { Hono } from 'hono'
 
-import {
-  cleanup,
-  getDateRange,
-  loadProfiles,
-  queryRows
-} from '../lib/fetch-profiles.ts'
+import { queryRows } from '../lib/fetch-profiles.ts'
 
 const latencyTimeseries = new Hono()
 
@@ -26,41 +21,34 @@ latencyTimeseries.post('/', async (context) => {
     return context.json({ error: 'database is required' }, 400)
   }
 
-  const dates = getDateRange(timeRange)
-  const tableName = await loadProfiles(database, dates)
+  const cutoff = dayjs().subtract(timeRange, 'second').toISOString()
 
-  try {
-    const cutoff = dayjs().subtract(timeRange, 'second').toISOString()
+  const countResult = await queryRows(`
+    SELECT COUNT(*)::INTEGER AS cnt
+    FROM profiles
+    WHERE database = '${database}' AND ts >= '${cutoff}'
+  `)
 
-    const countResult = await queryRows(`
-      SELECT COUNT(*)::INTEGER AS cnt
-      FROM ${tableName}
-      WHERE ts >= '${cutoff}'
-    `)
+  const rowCount = (countResult[0]?.cnt as number) ?? 0
 
-    const rowCount = (countResult[0]?.cnt as number) ?? 0
-
-    if (rowCount === 0) {
-      return context.json({ buckets: [] })
-    }
-
-    const interval = computeInterval(timeRange, rowCount)
-
-    const buckets = await queryRows(`
-      SELECT
-        time_bucket(INTERVAL '${interval} seconds', ts::TIMESTAMP)::VARCHAR AS "time",
-        PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY millis)::INTEGER AS "p50",
-        PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY millis)::INTEGER AS "p99"
-      FROM ${tableName}
-      WHERE ts >= '${cutoff}'
-      GROUP BY 1
-      ORDER BY 1
-    `)
-
-    return context.json({ buckets })
-  } finally {
-    await cleanup(tableName)
+  if (rowCount === 0) {
+    return context.json({ buckets: [] })
   }
+
+  const interval = computeInterval(timeRange, rowCount)
+
+  const buckets = await queryRows(`
+    SELECT
+      time_bucket(INTERVAL '${interval} seconds', ts::TIMESTAMP)::VARCHAR AS "time",
+      PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY millis)::INTEGER AS "p50",
+      PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY millis)::INTEGER AS "p99"
+    FROM profiles
+    WHERE database = '${database}' AND ts >= '${cutoff}'
+    GROUP BY 1
+    ORDER BY 1
+  `)
+
+  return context.json({ buckets })
 })
 
 export default latencyTimeseries

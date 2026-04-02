@@ -2,6 +2,8 @@ import dayjs from 'dayjs'
 import type { Document } from 'mongodb'
 import { log } from 'tiny-typescript-logger'
 
+import { refreshTable } from '../api/lib/duckdb.ts'
+
 export type ProfileRow = {
   client: string
   command: string
@@ -60,42 +62,55 @@ export function initializeBuffer(
   log.info(
     `Initialized ${dbName} for ${date} with ${existingRows.length} existing rows`
   )
+
+  void refreshTable(dbName, existingRows)
 }
 
 export function addEntries(
   dbName: string,
   entries: Document[]
-): { rows: ProfileRow[]; changed: boolean } {
-  const date = dayjs().format('YYYY-MM-DD')
-  const key = bufferKey(dbName, date)
-
-  if (!buffers.has(key)) {
-    buffers.set(key, [])
-    seen.set(key, new Set())
-    etags.set(key, null)
-  }
-
-  const buffer = buffers.get(key)
-  const keys = seen.get(key)
-
-  if (!buffer || !keys) {
-    throw new Error(`Buffer not initialized for ${key}`)
-  }
-
-  let changed = false
+): Map<string, { rows: ProfileRow[]; changed: boolean }> {
+  const results = new Map<string, { rows: ProfileRow[]; changed: boolean }>()
 
   for (const entry of entries) {
     const row = toProfileRow(dbName, entry)
+    const date = row.ts
+      ? dayjs(row.ts).format('YYYY-MM-DD')
+      : dayjs().format('YYYY-MM-DD')
+    const key = bufferKey(dbName, date)
+
+    if (!buffers.has(key)) {
+      buffers.set(key, [])
+      seen.set(key, new Set())
+      etags.set(key, null)
+    }
+
+    const buffer = buffers.get(key)
+    const keys = seen.get(key)
+
+    if (!buffer || !keys) {
+      throw new Error(`Buffer not initialized for ${key}`)
+    }
+
     const dk = dedupKey(row)
 
     if (!keys.has(dk)) {
       keys.add(dk)
       buffer.push(row)
-      changed = true
+
+      results.set(date, { rows: buffer, changed: true })
+    } else if (!results.has(date)) {
+      results.set(date, { rows: buffer, changed: false })
     }
   }
 
-  return { rows: buffer, changed }
+  for (const [, result] of results) {
+    if (result.changed) {
+      void refreshTable(dbName, result.rows)
+    }
+  }
+
+  return results
 }
 
 function toProfileRow(dbName: string, entry: Document): ProfileRow {

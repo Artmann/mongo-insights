@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 
-export { cleanup, loadProfiles, queryRows } from './duckdb.ts'
+export { queryRows } from './duckdb.ts'
 
 export function getDateRange(timeRangeSeconds: number): string[] {
   const days = Math.ceil(timeRangeSeconds / 86400)

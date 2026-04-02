@@ -101,7 +101,6 @@ async function poll(client: MongoClient, databases: string[]) {
 
 export async function collectProfiles(client: MongoClient, dbName: string) {
   const db = client.db(dbName)
-  const date = dayjs().format('YYYY-MM-DD')
 
   const filter = lastSeenTs.has(dbName)
     ? { ts: { $gt: lastSeenTs.get(dbName) } }
@@ -128,41 +127,44 @@ export async function collectProfiles(client: MongoClient, dbName: string) {
 
   log.info(`${dbName} — ${profiles.length} new profile entries`)
 
-  const { rows, changed } = addEntries(dbName, profiles)
+  const results = addEntries(dbName, profiles)
 
-  if (!changed) {
-    return
-  }
+  for (const [date, { rows, changed }] of results) {
+    if (!changed) {
+      continue
+    }
 
-  const etag = getEtag(dbName, date)
-  const result = await uploadProfiles(dbName, date, rows, etag)
+    const etag = getEtag(dbName, date)
+    const result = await uploadProfiles(dbName, date, rows, etag)
 
-  if (result.status === 'ok') {
-    setEtag(dbName, date, result.etag)
+    if (result.status === 'ok') {
+      setEtag(dbName, date, result.etag)
 
-    return
-  }
+      continue
+    }
 
-  const { rows: freshRows, etag: freshEtag } = await downloadProfiles(
-    dbName,
-    date
-  )
-
-  initializeBuffer(dbName, date, freshRows, freshEtag)
-
-  const merged = addEntries(dbName, profiles)
-
-  if (merged.changed) {
-    const retryEtag = getEtag(dbName, date)
-    const retryResult = await uploadProfiles(
+    const { rows: freshRows, etag: freshEtag } = await downloadProfiles(
       dbName,
-      date,
-      merged.rows,
-      retryEtag
+      date
     )
 
-    if (retryResult.status === 'ok') {
-      setEtag(dbName, date, retryResult.etag)
+    initializeBuffer(dbName, date, freshRows, freshEtag)
+
+    const retryResults = addEntries(dbName, profiles)
+    const retryEntry = retryResults.get(date)
+
+    if (retryEntry?.changed) {
+      const retryEtag = getEtag(dbName, date)
+      const retryResult = await uploadProfiles(
+        dbName,
+        date,
+        retryEntry.rows,
+        retryEtag
+      )
+
+      if (retryResult.status === 'ok') {
+        setEtag(dbName, date, retryResult.etag)
+      }
     }
   }
 }
