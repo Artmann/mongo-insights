@@ -38,7 +38,7 @@ function formatTime(isoString: string, timeRange: number): string {
     return date.format('HH:mm')
   }
 
-  return date.format('MMM D HH:mm')
+  return date.format('MMM D, HH:mm')
 }
 
 interface LatencyChartProps {
