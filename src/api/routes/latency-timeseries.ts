@@ -1,16 +1,14 @@
 import dayjs from 'dayjs'
 import { Hono } from 'hono'
 
-import { percentile } from '../../lib/percentile.ts'
-import { fetchRows, getDateRange } from '../lib/fetch-profiles.ts'
+import {
+  cleanup,
+  getDateRange,
+  loadProfiles,
+  queryRows
+} from '../lib/fetch-profiles.ts'
 
 const latencyTimeseries = new Hono()
-
-type Bucket = {
-  p50: number
-  p99: number
-  time: string
-}
 
 function computeInterval(timeRange: number, rowCount: number): number {
   const targetBuckets = Math.min(50, Math.max(10, Math.floor(rowCount / 5)))
@@ -29,43 +27,40 @@ latencyTimeseries.post('/', async (context) => {
   }
 
   const dates = getDateRange(timeRange)
-  const rows = await fetchRows(database, dates)
+  const tableName = await loadProfiles(database, dates)
 
-  const cutoff = dayjs().subtract(timeRange, 'second')
-  const filtered = rows.filter((row) => dayjs(row.ts).isAfter(cutoff))
+  try {
+    const cutoff = dayjs().subtract(timeRange, 'second').toISOString()
 
-  const interval = computeInterval(timeRange, filtered.length)
-  const bucketMap = new Map<string, number[]>()
+    const countResult = await queryRows(`
+      SELECT COUNT(*)::INTEGER AS cnt
+      FROM ${tableName}
+      WHERE ts >= '${cutoff}'
+    `)
 
-  for (const row of filtered) {
-    const timestamp = dayjs(row.ts)
-    const bucketTime = timestamp
-      .subtract(timestamp.unix() % interval, 'second')
-      .startOf('second')
-      .toISOString()
+    const rowCount = (countResult[0]?.cnt as number) ?? 0
 
-    const existing = bucketMap.get(bucketTime)
-
-    if (existing) {
-      existing.push(row.millis)
-    } else {
-      bucketMap.set(bucketTime, [row.millis])
+    if (rowCount === 0) {
+      return context.json({ buckets: [] })
     }
+
+    const interval = computeInterval(timeRange, rowCount)
+
+    const buckets = await queryRows(`
+      SELECT
+        time_bucket(INTERVAL '${interval} seconds', ts::TIMESTAMP)::VARCHAR AS "time",
+        PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY millis)::INTEGER AS "p50",
+        PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY millis)::INTEGER AS "p99"
+      FROM ${tableName}
+      WHERE ts >= '${cutoff}'
+      GROUP BY 1
+      ORDER BY 1
+    `)
+
+    return context.json({ buckets })
+  } finally {
+    await cleanup(tableName)
   }
-
-  const buckets: Bucket[] = Array.from(bucketMap.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([time, latencies]) => {
-      const sorted = latencies.sort((a, b) => a - b)
-
-      return {
-        p50: percentile(sorted, 50),
-        p99: percentile(sorted, 99),
-        time
-      }
-    })
-
-  return context.json({ buckets })
 })
 
 export default latencyTimeseries

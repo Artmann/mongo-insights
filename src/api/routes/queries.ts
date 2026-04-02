@@ -1,23 +1,23 @@
 import { Hono } from 'hono'
 
-import type { ProfileRow } from '../../collector/buffer.ts'
-import { percentile } from '../../lib/percentile.ts'
-import { fetchRows, getDateRange } from '../lib/fetch-profiles.ts'
-import { normalizeStatement } from '../normalize-statement.ts'
+import {
+  cleanup,
+  getDateRange,
+  loadProfiles,
+  queryRows
+} from '../lib/fetch-profiles.ts'
 
 const queries = new Hono()
 
-type QueryStats = {
-  normalizedStatement: string
-  percentOfRuntime: number
-  count: number
-  totalTime: number
-  p50Latency: number
-  p99Latency: number
-  documentsRead: number
-  documentsReturned: number
-  planSummary: string
-  responseSize: number
+const sortableColumns: Record<string, string> = {
+  count: '"count"',
+  documentsRead: '"documentsRead"',
+  documentsReturned: '"documentsReturned"',
+  p50Latency: '"p50Latency"',
+  p99Latency: '"p99Latency"',
+  percentOfRuntime: '"percentOfRuntime"',
+  responseSize: '"responseSize"',
+  totalTime: '"totalTime"'
 }
 
 queries.post('/', async (context) => {
@@ -35,98 +35,49 @@ queries.post('/', async (context) => {
   }
 
   const dates = getDateRange(timeRange)
-  const rows = await fetchRows(database, dates)
+  const tableName = await loadProfiles(database, dates)
 
-  const grouped = groupByQueryShape(rows)
-  const totalRuntime = rows.reduce((sum, row) => sum + row.millis, 0)
+  try {
+    const sortColumn = sortableColumns[sortBy] ?? '"totalTime"'
+    const direction = sortDirection === 'asc' ? 'ASC' : 'DESC'
+    const offset = (page - 1) * pageSize
 
-  const sortableKeys: (keyof QueryStats)[] = [
-    'count',
-    'documentsRead',
-    'documentsReturned',
-    'p50Latency',
-    'p99Latency',
-    'percentOfRuntime',
-    'responseSize',
-    'totalTime'
-  ]
+    const rows = await queryRows(`
+      WITH totals AS (
+        SELECT COALESCE(SUM(millis), 0) AS total_runtime
+        FROM ${tableName}
+      )
+      SELECT
+        normalized_statement AS "normalizedStatement",
+        CASE WHEN t.total_runtime > 0
+          THEN (SUM(millis)::DOUBLE / t.total_runtime) * 100
+          ELSE 0
+        END AS "percentOfRuntime",
+        COUNT(*)::INTEGER AS "count",
+        SUM(millis)::DOUBLE / 1000 AS "totalTime",
+        PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY millis)::INTEGER AS "p50Latency",
+        PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY millis)::INTEGER AS "p99Latency",
+        SUM("docsExamined")::INTEGER AS "documentsRead",
+        SUM(nreturned)::INTEGER AS "documentsReturned",
+        MODE("planSummary") AS "planSummary",
+        SUM("responseLength")::INTEGER AS "responseSize"
+      FROM ${tableName}, totals t
+      GROUP BY normalized_statement, t.total_runtime
+      ORDER BY ${sortColumn} ${direction}
+      LIMIT ${pageSize} OFFSET ${offset}
+    `)
 
-  const sortKey = sortableKeys.includes(sortBy as keyof QueryStats)
-    ? (sortBy as keyof QueryStats)
-    : 'totalTime'
+    const totalResult = await queryRows(`
+      SELECT COUNT(DISTINCT normalized_statement)::INTEGER AS total
+      FROM ${tableName}
+    `)
 
-  const direction = sortDirection === 'asc' ? 1 : -1
+    const total = (totalResult[0]?.total as number) ?? 0
 
-  const aggregated = Array.from(grouped.entries())
-    .map(([key, group]) => aggregate(key, group, totalRuntime))
-    .sort(
-      (a, b) => direction * ((a[sortKey] as number) - (b[sortKey] as number))
-    )
-
-  const total = aggregated.length
-  const start = (page - 1) * pageSize
-  const paged = aggregated.slice(start, start + pageSize)
-
-  return context.json({ queries: paged, total, page, pageSize })
+    return context.json({ queries: rows, total, page, pageSize })
+  } finally {
+    await cleanup(tableName)
+  }
 })
-
-function groupByQueryShape(rows: ProfileRow[]): Map<string, ProfileRow[]> {
-  const groups = new Map<string, ProfileRow[]>()
-
-  for (const row of rows) {
-    const key = normalizeStatement(row.command)
-    const group = groups.get(key)
-
-    if (group) {
-      group.push(row)
-    } else {
-      groups.set(key, [row])
-    }
-  }
-
-  return groups
-}
-
-function aggregate(
-  key: string,
-  rows: ProfileRow[],
-  totalRuntime: number
-): QueryStats {
-  const millis = rows.map((row) => row.millis).sort((a, b) => a - b)
-  const totalMillis = millis.reduce((sum, ms) => sum + ms, 0)
-
-  return {
-    normalizedStatement: normalizeStatement(rows[0]?.command ?? ''),
-    percentOfRuntime: totalRuntime > 0 ? (totalMillis / totalRuntime) * 100 : 0,
-    count: rows.length,
-    totalTime: totalMillis / 1000,
-    p50Latency: percentile(millis, 50),
-    p99Latency: percentile(millis, 99),
-    documentsRead: rows.reduce((sum, row) => sum + row.docsExamined, 0),
-    documentsReturned: rows.reduce((sum, row) => sum + row.nreturned, 0),
-    planSummary: mostCommon(rows.map((row) => row.planSummary)),
-    responseSize: rows.reduce((sum, row) => sum + row.responseLength, 0)
-  }
-}
-
-function mostCommon(values: string[]): string {
-  const counts = new Map<string, number>()
-
-  for (const value of values) {
-    counts.set(value, (counts.get(value) ?? 0) + 1)
-  }
-
-  let best = ''
-  let bestCount = 0
-
-  for (const [value, count] of counts) {
-    if (count > bestCount) {
-      best = value
-      bestCount = count
-    }
-  }
-
-  return best
-}
 
 export default queries

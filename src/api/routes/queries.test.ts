@@ -1,13 +1,97 @@
 import { describe, expect, mock, test } from 'bun:test'
+import { DuckDBInstance } from '@duckdb/node-api'
 
 import type { ProfileRow } from '../../collector/buffer.ts'
+import { normalizeStatement } from '../normalize-statement.ts'
 
-const mockDownloadProfiles = mock(() =>
-  Promise.resolve({ rows: [] as ProfileRow[], etag: null })
-)
+type DuckDBConnection = Awaited<ReturnType<DuckDBInstance['connect']>>
 
-mock.module('../../collector/storage.ts', () => ({
-  downloadProfiles: mockDownloadProfiles
+let connection: DuckDBConnection
+let currentTable = ''
+
+async function setupConnection() {
+  const instance = await DuckDBInstance.create(':memory:')
+
+  connection = await instance.connect()
+}
+
+async function createTable(rows: ProfileRow[]): Promise<string> {
+  if (!connection) {
+    await setupConnection()
+  }
+
+  const tableName = `test_${crypto.randomUUID().replace(/-/g, '')}`
+
+  await connection.run(`
+    CREATE TEMP TABLE ${tableName} (
+      client VARCHAR, command VARCHAR, database VARCHAR,
+      "docsExamined" INTEGER, "execStats" VARCHAR, "keysExamined" INTEGER,
+      millis INTEGER, nreturned INTEGER, ns VARCHAR, op VARCHAR,
+      "planSummary" VARCHAR, "queryHash" VARCHAR, "responseLength" INTEGER,
+      ts VARCHAR, "user" VARCHAR, normalized_statement VARCHAR
+    )
+  `)
+
+  if (rows.length > 0) {
+    const prepared = await connection.prepare(`
+      INSERT INTO ${tableName} VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+      )
+    `)
+
+    for (const row of rows) {
+      prepared.bindVarchar(1, row.client)
+      prepared.bindVarchar(2, row.command)
+      prepared.bindVarchar(3, row.database)
+      prepared.bindInteger(4, row.docsExamined)
+      prepared.bindVarchar(5, row.execStats)
+      prepared.bindInteger(6, row.keysExamined)
+      prepared.bindInteger(7, row.millis)
+      prepared.bindInteger(8, row.nreturned)
+      prepared.bindVarchar(9, row.ns)
+      prepared.bindVarchar(10, row.op)
+      prepared.bindVarchar(11, row.planSummary)
+      prepared.bindVarchar(12, row.queryHash)
+      prepared.bindInteger(13, row.responseLength)
+      prepared.bindVarchar(14, row.ts)
+      prepared.bindVarchar(15, row.user)
+      prepared.bindVarchar(16, normalizeStatement(row.command))
+      await prepared.run()
+    }
+  }
+
+  currentTable = tableName
+
+  return tableName
+}
+
+mock.module('../lib/duckdb.ts', () => ({
+  getConnection: () => Promise.resolve(connection),
+  loadProfiles: (_database: string, _dates: string[]) =>
+    Promise.resolve(currentTable),
+  queryRows: async (sql: string) => {
+    const reader = await connection.runAndReadAll(sql)
+    const columns = reader.columnNames()
+    const rows = reader.getRows()
+
+    return rows.map((row: unknown[]) => {
+      const record: Record<string, unknown> = {}
+
+      for (let i = 0; i < columns.length; i++) {
+        const column = columns[i]
+        const value = row[i]
+
+        if (column) {
+          record[column] = typeof value === 'bigint' ? Number(value) : value
+        }
+      }
+
+      return record
+    })
+  },
+  cleanup: async (tableName: string) => {
+    await connection.run(`DROP TABLE IF EXISTS ${tableName}`)
+  }
 }))
 
 mock.module('../../db.ts', () => ({
@@ -60,7 +144,7 @@ describe('POST /api/queries', () => {
   })
 
   test('returns empty queries when no data exists', async () => {
-    mockDownloadProfiles.mockResolvedValue({ rows: [], etag: null })
+    await createTable([])
 
     const response = await request({ database: 'mydb', timeRange: 86400 })
     const body = await response.json()
@@ -96,7 +180,7 @@ describe('POST /api/queries', () => {
       })
     ]
 
-    mockDownloadProfiles.mockResolvedValue({ rows, etag: null })
+    await createTable(rows)
 
     const response = await request({ database: 'mydb', timeRange: 86400 })
     const body = await response.json()
@@ -129,7 +213,7 @@ describe('POST /api/queries', () => {
       })
     ]
 
-    mockDownloadProfiles.mockResolvedValue({ rows, etag: null })
+    await createTable(rows)
 
     const response = await request({ database: 'mydb', timeRange: 86400 })
     const body = await response.json()
@@ -153,7 +237,7 @@ describe('POST /api/queries', () => {
       makeRow({ queryHash: 'slow', millis: 10 })
     ]
 
-    mockDownloadProfiles.mockResolvedValue({ rows, etag: null })
+    await createTable(rows)
 
     const response = await request({ database: 'mydb', timeRange: 86400 })
     const body = await response.json()
@@ -172,7 +256,7 @@ describe('POST /api/queries', () => {
       })
     )
 
-    mockDownloadProfiles.mockResolvedValue({ rows, etag: null })
+    await createTable(rows)
 
     const response = await request({
       database: 'mydb',
@@ -189,7 +273,7 @@ describe('POST /api/queries', () => {
   })
 
   test('defaults to page 1 and pageSize 25', async () => {
-    mockDownloadProfiles.mockResolvedValue({ rows: [], etag: null })
+    await createTable([])
 
     const response = await request({ database: 'mydb', timeRange: 86400 })
     const body = await response.json()
@@ -208,7 +292,7 @@ describe('POST /api/queries', () => {
       })
     ]
 
-    mockDownloadProfiles.mockResolvedValue({ rows, etag: null })
+    await createTable(rows)
 
     const response = await request({ database: 'mydb', timeRange: 86400 })
     const body = await response.json()

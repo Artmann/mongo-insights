@@ -1,7 +1,6 @@
 import dayjs from 'dayjs'
 
-import type { ProfileRow } from '../../collector/buffer.ts'
-import { downloadProfiles } from '../../collector/storage.ts'
+export { cleanup, loadProfiles, queryRows } from './duckdb.ts'
 
 export function getDateRange(timeRangeSeconds: number): string[] {
   const days = Math.ceil(timeRangeSeconds / 86400)
@@ -12,15 +11,4 @@ export function getDateRange(timeRangeSeconds: number): string[] {
   }
 
   return dates
-}
-
-export async function fetchRows(
-  database: string,
-  dates: string[]
-): Promise<ProfileRow[]> {
-  const results = await Promise.all(
-    dates.map((date) => downloadProfiles(database, date))
-  )
-
-  return results.flatMap((result) => result.rows)
 }
