@@ -18,12 +18,16 @@ export function useTimeRange(): number {
   return Number(searchParams.get('timeRange')) || defaultTimeRange
 }
 
-export function timeRangeLabel(seconds: number): string {
-  const option = timeRangeOptions.find(
-    (candidate) => candidate.seconds === seconds
-  )
+const timeRangeLabels: Record<number, string> = {
+  3600: '1 hour',
+  28800: '8 hours',
+  86400: '24 hours',
+  259200: '3 days',
+  604800: '7 days'
+}
 
-  return option?.label ?? '24h'
+export function timeRangeLabel(seconds: number): string {
+  return timeRangeLabels[seconds] ?? '24 hours'
 }
 
 export function TimeRangeSelector() {

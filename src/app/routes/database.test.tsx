@@ -144,7 +144,7 @@ describe('DatabasePage', () => {
     renderPage('mydb')
 
     expect(screen.getByText('Insights')).toBeTruthy()
-    expect(screen.getByText('Queries in the last 24h')).toBeTruthy()
+    expect(screen.getByText('Queries in the last 24 hours')).toBeTruthy()
   })
 
   test('shows loading state while queries are fetching', () => {
@@ -312,13 +312,13 @@ describe('DatabasePage', () => {
   test('updates heading based on time range param', () => {
     renderPage('mydb', 'timeRange=3600')
 
-    expect(screen.getByText('Queries in the last 1h')).toBeTruthy()
+    expect(screen.getByText('Queries in the last 1 hour')).toBeTruthy()
   })
 
   test('shows 7d label for 7-day time range', () => {
     renderPage('mydb', 'timeRange=604800')
 
-    expect(screen.getByText('Queries in the last 7d')).toBeTruthy()
+    expect(screen.getByText('Queries in the last 7 days')).toBeTruthy()
   })
 
   test('shows chart loading state', () => {
