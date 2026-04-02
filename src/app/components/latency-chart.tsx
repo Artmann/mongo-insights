@@ -21,13 +21,13 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useLatencyTimeseries } from '@/hooks/use-latency-timeseries'
 
 const chartConfig = {
-  p50: {
-    label: 'p50 latency',
-    color: 'var(--chart-1)'
-  },
   p99: {
     label: 'p99 latency',
     color: 'var(--chart-2)'
+  },
+  p50: {
+    label: 'p50 latency',
+    color: 'var(--chart-1)'
   }
 } satisfies ChartConfig
 
@@ -144,18 +144,18 @@ export function LatencyChart({ database, timeRange }: LatencyChartProps) {
         <ChartLegend content={<ChartLegendContent />} />
 
         <Line
-          dataKey="p50"
+          dataKey="p99"
           type="monotone"
-          stroke="var(--color-p50)"
+          stroke="var(--color-p99)"
           strokeWidth={2}
           dot={false}
           connectNulls
         />
 
         <Line
-          dataKey="p99"
+          dataKey="p50"
           type="monotone"
-          stroke="var(--color-p99)"
+          stroke="var(--color-p50)"
           strokeWidth={2}
           dot={false}
           connectNulls
