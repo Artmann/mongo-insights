@@ -137,14 +137,20 @@ describe('POST /api/latency-timeseries', () => {
     expect(body).toEqual({ error: 'database is required' })
   })
 
-  test('returns empty buckets when no data exists', async () => {
+  test('returns all buckets with null values when no data exists', async () => {
     await loadRows([])
 
     const response = await request({ database: 'mydb', timeRange: 86400 })
     const body = await response.json()
 
     expect(response.status).toEqual(200)
-    expect(body).toEqual({ buckets: [] })
+    expect(body.buckets.length).toBeGreaterThanOrEqual(1)
+
+    for (const bucket of body.buckets) {
+      expect(bucket).toHaveProperty('time')
+      expect(bucket.p50).toEqual(null)
+      expect(bucket.p99).toEqual(null)
+    }
   })
 
   test('computes p50 and p99 per bucket', async () => {
@@ -164,7 +170,13 @@ describe('POST /api/latency-timeseries', () => {
 
     expect(body.buckets.length).toBeGreaterThanOrEqual(1)
 
-    const bucket = body.buckets[0]
+    const dataBuckets = body.buckets.filter(
+      (b: { p50: number | null }) => b.p50 !== null
+    )
+
+    expect(dataBuckets.length).toBeGreaterThanOrEqual(1)
+
+    const bucket = dataBuckets[0]
 
     expect(bucket.p50).not.toEqual(bucket.p99)
     expect(bucket).toHaveProperty('time')
@@ -219,7 +231,11 @@ describe('POST /api/latency-timeseries', () => {
     const response = await request({ database: 'mydb', timeRange: 3600 })
     const body = await response.json()
 
-    for (const bucket of body.buckets) {
+    const dataBuckets = body.buckets.filter(
+      (b: { p99: number | null }) => b.p99 !== null
+    )
+
+    for (const bucket of dataBuckets) {
       expect(bucket.p99).toBeLessThanOrEqual(50)
     }
   })
@@ -291,7 +307,11 @@ describe('POST /api/latency-timeseries', () => {
     const response = await request({ database: 'mydb', timeRange: 86400 })
     const body = await response.json()
 
-    const bucket = body.buckets[0]
+    const dataBuckets = body.buckets.filter(
+      (b: { p50: number | null }) => b.p50 !== null
+    )
+
+    const bucket = dataBuckets[0]
 
     expect(bucket.p50).toBeLessThan(bucket.p99)
   })

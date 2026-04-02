@@ -6,7 +6,8 @@ import { queryRows } from '../lib/fetch-profiles.ts'
 const latencyTimeseries = new Hono()
 
 function computeInterval(timeRange: number, rowCount: number): number {
-  const targetBuckets = Math.min(50, Math.max(10, Math.floor(rowCount / 5)))
+  const targetBuckets =
+    rowCount === 0 ? 20 : Math.min(50, Math.max(10, Math.floor(rowCount / 5)))
 
   return Math.ceil(timeRange / targetBuckets)
 }
@@ -30,22 +31,32 @@ latencyTimeseries.post('/', async (context) => {
   `)
 
   const rowCount = (countResult[0]?.cnt as number) ?? 0
-
-  if (rowCount === 0) {
-    return context.json({ buckets: [] })
-  }
-
   const interval = computeInterval(timeRange, rowCount)
 
   const buckets = await queryRows(`
+    WITH data AS (
+      SELECT
+        time_bucket(INTERVAL '${interval} seconds', ts::TIMESTAMP) AS bucket,
+        PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY millis)::INTEGER AS "p50",
+        PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY millis)::INTEGER AS "p99"
+      FROM profiles
+      WHERE database = '${database}' AND ts >= '${cutoff}'
+      GROUP BY 1
+    ),
+    series AS (
+      SELECT unnest(generate_series(
+        time_bucket(INTERVAL '${interval} seconds', '${cutoff}'::TIMESTAMP),
+        time_bucket(INTERVAL '${interval} seconds', NOW()::TIMESTAMP),
+        INTERVAL '${interval} seconds'
+      )) AS bucket
+    )
     SELECT
-      time_bucket(INTERVAL '${interval} seconds', ts::TIMESTAMP)::VARCHAR AS "time",
-      PERCENTILE_DISC(0.50) WITHIN GROUP (ORDER BY millis)::INTEGER AS "p50",
-      PERCENTILE_DISC(0.99) WITHIN GROUP (ORDER BY millis)::INTEGER AS "p99"
-    FROM profiles
-    WHERE database = '${database}' AND ts >= '${cutoff}'
-    GROUP BY 1
-    ORDER BY 1
+      s.bucket::VARCHAR AS "time",
+      d."p50",
+      d."p99"
+    FROM series s
+    LEFT JOIN data d ON s.bucket = d.bucket
+    ORDER BY s.bucket
   `)
 
   return context.json({ buckets })

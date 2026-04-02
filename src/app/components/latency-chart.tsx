@@ -149,6 +149,7 @@ export function LatencyChart({ database, timeRange }: LatencyChartProps) {
           stroke="var(--color-p50)"
           strokeWidth={2}
           dot={false}
+          connectNulls
         />
 
         <Line
@@ -157,6 +158,7 @@ export function LatencyChart({ database, timeRange }: LatencyChartProps) {
           stroke="var(--color-p99)"
           strokeWidth={2}
           dot={false}
+          connectNulls
         />
       </LineChart>
     </ChartContainer>
