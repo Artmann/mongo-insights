@@ -137,7 +137,8 @@ describe('DatabasePage', () => {
     renderPage('noprofile')
 
     expect(screen.getByText('Profiling is not enabled')).toBeTruthy()
-    expect(screen.getByText('db.setProfilingLevel(1)')).toBeTruthy()
+    expect(screen.getByText(/db\.setProfilingLevel\(1\)/)).toBeTruthy()
+    expect(screen.getByText(/use noprofile/)).toBeTruthy()
   })
 
   test('shows insights header when profiling is enabled', () => {

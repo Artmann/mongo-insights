@@ -91,8 +91,8 @@ export function DatabasePage() {
         </EmptyHeader>
 
         <EmptyContent>
-          <pre className="rounded-lg bg-muted px-6 py-3 text-sm">
-            db.setProfilingLevel(1)
+          <pre className="w-full rounded-lg bg-muted px-6 py-4 text-left text-sm">
+            {`use ${databaseName ?? ''}\ndb.setProfilingLevel(1)`}
           </pre>
           <p className="text-xs text-muted-foreground">
             Logs queries slower than 100ms. Use level 2 to log all queries.

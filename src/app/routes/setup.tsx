@@ -69,8 +69,8 @@ export function SetupPage() {
           </li>
         </ol>
 
-        <pre className="rounded-lg bg-muted px-6 py-3 text-sm">
-          db.setProfilingLevel(1)
+        <pre className="w-full rounded-lg bg-muted px-6 py-4 text-left text-sm">
+          {'use <database-name>\ndb.setProfilingLevel(1)'}
         </pre>
 
         <p className="text-xs text-muted-foreground">
